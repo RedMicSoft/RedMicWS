@@ -1,9 +1,10 @@
 from app.database import Base
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String
+from app.profiles import Profile
 
 
-class UserModel(Base):
+class User(Base):
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
@@ -11,3 +12,8 @@ class UserModel(Base):
     hashed_password: Mapped[str] = mapped_column()
     access_level: Mapped[int] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
+
+    profile: Mapped["Profile"] = relationship(
+        "Profile",
+        back_populates="user",
+    )

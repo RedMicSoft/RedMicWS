@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 from collections.abc import AsyncGenerator
 
-DB_URL = "postgresql+asyncpg://redmic:REDMICWS@localhost:5432/redmic_db"
+DB_URL = "postgresql+asyncpg://postgres:1234@localhost:5432/redmic_db"
 
 a_engine = create_async_engine(DB_URL, echo=True)  # echo в проде убрать
 

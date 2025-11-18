@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Date
 from datetime import datetime, date, timezone
 from app.database import Base
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 
 class Series(Base):
@@ -25,3 +25,9 @@ class Series(Base):
         Date, default=lambda: datetime.now(timezone.utc)
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+
+    profiles: Mapped[list["Profile"]] = relationship(
+        "Profile",
+        back_populates="series",
+        secondary="profile_series",
+    )

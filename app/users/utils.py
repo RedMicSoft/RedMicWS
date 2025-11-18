@@ -3,11 +3,15 @@ from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 import jwt
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
+from .models import User as UserModel
+from sqlalchemy import select
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ACCESS_TOKEN_EXPIRE_DAYS = 30
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 SECRET_KEY = "RedMicWorkSpaceRMWS"
 ALGORITHM = "HS256"
 
@@ -34,3 +38,36 @@ def create_access_token(data: dict) -> str:
     expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
+):
+    """
+    Проверяет JWT и возвращает пользователя из базы.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.PyJWTError:
+        raise credentials_exception
+    result = await db.scalars(
+        select(UserModel).where(UserModel.email == email, UserModel.is_active == True)
+    )
+    user = result.first()
+    if user is None:
+        raise credentials_exception
+    return user

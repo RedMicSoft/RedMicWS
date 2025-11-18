@@ -16,9 +16,10 @@ class UserResponse(BaseModel):
     Схема ответа для GET запросов.
     """
 
-    id: int
+    user_id: int
     email: EmailStr
     hashed_password: str
+    access_level: int
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
