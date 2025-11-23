@@ -4,22 +4,29 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="sqlalchemy models + jwt + pydantic">
-      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
+    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="auth + alembic + postgresql">
+      <change afterPath="$PROJECT_DIR$/app/levels/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/levels/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/levels/schemas.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/roles/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/roles/routes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/roles/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/series/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,22 +66,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.database.executor": "Run",
-    "Python.main.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "settings.editor.selected.configurable": "com.jetbrains.python.black.configuration.BlackFormatterConfigurable",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.database.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.black.configuration.BlackFormatterConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Python.database">
     <configuration name="database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RedMicWS" />
@@ -150,7 +157,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763411166834</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="auth + alembic + postgresql">
+      <option name="closed" value="true" />
+      <created>1763490367485</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1763490367485</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -166,6 +181,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="sqlalchemy models + jwt + pydantic" />
-    <option name="LAST_COMMIT_MESSAGE" value="sqlalchemy models + jwt + pydantic" />
+    <MESSAGE value="auth + alembic + postgresql" />
+    <option name="LAST_COMMIT_MESSAGE" value="auth + alembic + postgresql" />
   </component>
 </project>

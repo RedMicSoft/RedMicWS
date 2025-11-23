@@ -2,6 +2,7 @@ from sqlalchemy import ForeignKey, Date
 from datetime import datetime, date, timezone
 from app.database import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
+from ..roles import Role, RoleSeries
 
 
 class Series(Base):
@@ -30,4 +31,10 @@ class Series(Base):
         "Profile",
         back_populates="series",
         secondary="profile_series",
+    )
+
+    roles: Mapped[list[Role]] = relationship(
+        Role,
+        back_populates="series",
+        secondary=RoleSeries.__table__,
     )

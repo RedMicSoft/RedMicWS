@@ -32,7 +32,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     """
-    создаёт JWT с id, sub, role, exp
+    создаёт JWT с id, exp
     """
     to_encode = data.copy()
     expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_DAYS)
@@ -53,8 +53,8 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        user_id: str = payload.get("id")
+        if user_id is None:
             raise credentials_exception
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -65,9 +65,15 @@ async def get_current_user(
     except jwt.PyJWTError:
         raise credentials_exception
     result = await db.scalars(
-        select(UserModel).where(UserModel.email == email, UserModel.is_active == True)
+        select(UserModel).where(
+            UserModel.user_id == user_id, UserModel.is_active == True
+        )
     )
     user = result.first()
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_max_lvl(db: AsyncSession, user: UserModel) -> int:
+    return max([lvl for lvl in user.levels])
