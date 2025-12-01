@@ -1,3 +1,3 @@
-from .models import ProjectProfile, Project, ProjectLink
+from .models import Project, ProjectLink, ProjectUser
 
-__all__ = ["ProjectProfile", "Project", "ProjectLink"]
+__all__ = ["Project", "ProjectLink", "ProjectUser"]

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .models import Level as LevelModel
 from sqlalchemy import select, update
 
-from ..users import User as UserModel, get_current_user
+from ..users import User as UserModel, get_current_user, get_max_lvl
 
 router = APIRouter(
     tags=["levels"],
@@ -47,8 +47,7 @@ async def create_level(
     Только для главного админа.\n
     Создаёт новую роль в БД.
     """
-    user_access = max([lvl for lvl in user.levels])
-    if user_access < 4:
+    if await get_max_lvl(db, user) < 4:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only main admins can perform this action",
@@ -72,8 +71,7 @@ async def update_level(
     Только для гл. админа.\n
     Обновляет категорию по её id.
     """
-    user_access = max([lvl for lvl in user.levels])
-    if user_access < 4:
+    if await get_max_lvl(db, user) < 4:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only main admins can perform this action",

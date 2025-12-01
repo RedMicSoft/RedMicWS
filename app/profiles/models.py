@@ -16,11 +16,9 @@ class Profile(Base):
     avatar: Mapped[str | None] = mapped_column(Text)
     age: Mapped[int | None] = mapped_column()
     birth_date: Mapped[date | None] = mapped_column(Date)
-    registered_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    registered_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now())
     updated_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
+        default=lambda: datetime.now(), onupdate=lambda: datetime.now()
     )
     is_active: Mapped[bool] = mapped_column(default=True)
 

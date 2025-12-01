@@ -11,11 +11,13 @@ async def root():
 
 from app.users import router as user_router
 from app.profiles import router as profiles_router
-from app.levels import router as levels_router
+from app.levels.routes import router as levels_router
+from app.projects.routes import router as projects_router
 
 app.include_router(user_router)
 app.include_router(profiles_router)
 app.include_router(levels_router)
+app.include_router(projects_router)
 
 app.add_middleware(
     CORSMiddleware,

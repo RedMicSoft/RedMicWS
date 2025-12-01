@@ -21,3 +21,9 @@ class User(Base):
         back_populates="users",
         secondary="user_level",
     )
+
+    projects: Mapped[list["Project"]] = relationship(
+        "Project",
+        back_populates="users",
+        secondary="projects_users",
+    )

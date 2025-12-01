@@ -20,10 +20,16 @@ class Project(Base):
         back_populates="project",
     )
 
-    profiles: Mapped[list["Profile"]] = relationship(
-        "Profile",
+    # profiles: Mapped[list["Profile"]] = relationship(
+    #     "Profile",
+    #     back_populates="projects",
+    #     secondary="project_profiles",
+    # )
+
+    users: Mapped[list["User"]] = relationship(
+        "User",
         back_populates="projects",
-        secondary="project_profiles",
+        secondary="projects_users",
     )
 
 
@@ -42,12 +48,22 @@ class ProjectLink(Base):
     )
 
 
-class ProjectProfile(Base):
-    __tablename__ = "project_profiles"
+# deprecated
+# class ProjectProfile(Base):
+#     __tablename__ = "project_profiles"
+#
+#     project_id: Mapped[int] = mapped_column(
+#         ForeignKey("projects.project_id"), primary_key=True
+#     )
+#     profile_id: Mapped[int] = mapped_column(
+#         ForeignKey("profiles.profile_id"), primary_key=True
+#     )
 
+
+class ProjectUser(Base):
+    __tablename__ = "projects_users"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.project_id"), primary_key=True
-    )
-    profile_id: Mapped[int] = mapped_column(
-        ForeignKey("profiles.profile_id"), primary_key=True
     )

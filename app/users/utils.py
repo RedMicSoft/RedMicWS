@@ -4,10 +4,13 @@ from datetime import datetime, timedelta
 import jwt
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
 
 from app.database import get_db
 from .models import User as UserModel
-from sqlalchemy import select
+
+from app.levels.models import UserLevel, Level as LevelModel
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ACCESS_TOKEN_EXPIRE_DAYS = 30
@@ -76,4 +79,21 @@ async def get_current_user(
 
 
 async def get_max_lvl(db: AsyncSession, user: UserModel) -> int:
-    return max([lvl for lvl in user.levels])
+    stmt = await db.scalars(
+        select(LevelModel).join(UserLevel).where(UserLevel.user_id == user.user_id)
+    )
+    res = stmt.all()
+    if res:
+        return max([level.access_level for level in res])
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="У пользователя нет ролей."
+        )
+
+
+async def check_admin(db: AsyncSession, user: UserModel) -> bool:
+    return await get_max_lvl(db, user) == 3
+
+
+async def check_senior_admin(db: AsyncSession, user: UserModel) -> bool:
+    return await get_max_lvl(db, user) == 4
