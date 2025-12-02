@@ -90,7 +90,7 @@ async def crt_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     return db_user
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: UserCreate,
     db: AsyncSession = Depends(get_db),
@@ -142,11 +142,13 @@ async def create_user(
         hashed_password=hash_password(user.password),
     )
     db.add(db_user)
-    await db.commit()
+    await db.flush()
     await db.refresh(db_user)
+
     user_role = UserLevel(level_id=role.level_id, user_id=db_user.user_id)
     db.add(user_role)
     await db.commit()
+
     return {"User": db_user, "role": role}
 
 

@@ -22,9 +22,10 @@ class Profile(Base):
     )
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    projects: Mapped[list["Project"]] = relationship(
-        "Project", back_populates="profiles", secondary="project_profiles"
-    )
+    # deprecated, потом удалю мб
+    # projects: Mapped[list["Project"]] = relationship(
+    #     "Project", back_populates="profiles", secondary="project_profiles"
+    # )
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 

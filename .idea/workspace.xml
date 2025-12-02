@@ -4,19 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="all tables + routes for users/profies/levels">
+    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="Alebmic DB migration history">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
@@ -165,7 +158,23 @@
       <option name="project" value="LOCAL" />
       <updated>1763917212568</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="endpoints For projects &#10;change DB">
+      <option name="closed" value="true" />
+      <created>1764609554436</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764609554436</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Alebmic DB migration history">
+      <option name="closed" value="true" />
+      <created>1764609648863</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1764609648863</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -173,7 +182,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -183,6 +204,10 @@
     <MESSAGE value="sqlalchemy models + jwt + pydantic" />
     <MESSAGE value="auth + alembic + postgresql" />
     <MESSAGE value="all tables + routes for users/profies/levels" />
-    <option name="LAST_COMMIT_MESSAGE" value="all tables + routes for users/profies/levels" />
+    <MESSAGE value="endpoints For projects &#10;change DB" />
+    <MESSAGE value="endpoints For projects&#10;change DB&#10;small bug fixes" />
+    <MESSAGE value="endpoints For projects&#10;change DB&#10;small bug fixes" />
+    <MESSAGE value="Alebmic DB migration history" />
+    <option name="LAST_COMMIT_MESSAGE" value="Alebmic DB migration history" />
   </component>
 </project>

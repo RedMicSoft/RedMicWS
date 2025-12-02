@@ -14,6 +14,7 @@ class Project(Base):
     image_url: Mapped[str | None] = mapped_column()
     created_at: Mapped[date] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
+    status: Mapped[str] = mapped_column()
 
     links: Mapped[list["ProjectLink"]] = relationship(
         "ProjectLink",

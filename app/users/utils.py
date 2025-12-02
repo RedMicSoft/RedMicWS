@@ -97,3 +97,7 @@ async def check_admin(db: AsyncSession, user: UserModel) -> bool:
 
 async def check_senior_admin(db: AsyncSession, user: UserModel) -> bool:
     return await get_max_lvl(db, user) == 4
+
+
+async def check_curator(db: AsyncSession, user: UserModel) -> bool:
+    return await get_max_lvl(db, user) == 2
