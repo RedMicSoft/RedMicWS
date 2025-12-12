@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from app.database import get_db
-from .models import Project as ProjectModel, ProjectLink, ProjectUser
+from .models import Project as ProjectModel, ProjectLink, ProjectUser, Project
 from app.users.models import User as UserModel
 from .schemas import ProjectResponse, ProjectCreate
 from app.users.utils import (
@@ -38,7 +38,7 @@ async def get_projects(
     else:
         projects = await db.scalars(
             select(ProjectModel)
-            .join(ProjectUser)
+            .join(ProjectUser, ProjectModel.project_id == ProjectUser.project_id)
             .where(ProjectUser.user_id == user.user_id, ProjectModel.is_active == True)
         )
 
@@ -49,7 +49,26 @@ async def get_projects(
             status_code=status.HTTP_404_NOT_FOUND, detail="Проектов ещё не существует"
         )
 
-    return res
+    result = []
+    for project in res:
+        curator = await db.scalar(
+            select(UserModel).where(
+                UserModel.is_active == True,
+                UserModel.user_id == project.curator,
+            )
+        )
+        response = ProjectResponse(
+            project_id=project.project_id,
+            title=project.title,
+            type=project.type,
+            curator=curator.nickname,
+            image_url=project.image_url,
+            created_at=project.created_at,
+            is_active=project.is_active,
+            status=project.status,
+        )
+        result.append(response)
+    return result
 
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -184,7 +203,6 @@ async def update_project(
     )
 
     curr_participants = stmt.all()
-    print(len(curr_participants), "HAHAHAHAAHAHAH")
     # удаление участников из проекта
     for participant in curr_participants:
         if participant.nickname not in updated_project.participants:
@@ -198,9 +216,7 @@ async def update_project(
 
     # добавление новых участников в проект
     for participant in participants:
-        print([participant.nickname], "IM HERE", [p.user_id for p in curr_participants])
         if participant.user_id in [p.user_id for p in curr_participants]:
-            print("CONTINUE", participant.nickname)
             continue
         else:
             new_db_participant = ProjectUser(
@@ -274,3 +290,53 @@ async def update_project(
         status=upd_project.status,
     )
     return response
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_200_OK)
+async def delete_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    """
+    Эндпоинт для мягкого удаления проекта.
+    Доступен только 2+ лвл.
+    """
+    if not await get_max_lvl(db, user) >= 2:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только куратор и выше может удалить проект",
+        )
+
+    project = await db.scalar(
+        select(ProjectModel).where(
+            ProjectModel.project_id == project_id, ProjectModel.is_active == True
+        )
+    )
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    db_links = await db.scalars(
+        select(ProjectLink).where(
+            ProjectLink.project_id == project_id, ProjectLink.is_active == True
+        )
+    )
+    # Мягкое удаление ссылок
+    links = db_links.all()
+    for link in links:
+        link.is_active = False
+    # удаление связей с пользователями
+    db_participants = await db.scalars(
+        select(ProjectUser).where(ProjectUser.project_id == project_id)
+    )
+    participants = db_participants.all()
+    if participants:
+        for participant in participants:
+            await db.delete(participant)
+
+    project.is_active = False
+    await db.commit()
+
+    return "Проект был успешно удалён."

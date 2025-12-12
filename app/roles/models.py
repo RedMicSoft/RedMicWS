@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from app.database import Base
@@ -9,7 +9,8 @@ class Role(Base):
 
     role_id: Mapped[int] = mapped_column(primary_key=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.profile_id"))
-    srt_url: Mapped[str] = mapped_column()
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.project_id"))
+    srt: Mapped[str] = mapped_column(Text)
     name: Mapped[str] = mapped_column()
     result_url: Mapped[str] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)

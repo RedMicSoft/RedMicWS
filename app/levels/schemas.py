@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class LevelCreate(BaseModel):
     role_name: str = Field(...)
-    access_level: int = Field(..., ge=1, le=4)
+    access_level: int = Field(..., ge=1, le=3)
 
 
 class LevelResponse(BaseModel):

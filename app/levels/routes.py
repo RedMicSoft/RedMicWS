@@ -2,8 +2,8 @@ from fastapi import APIRouter, FastAPI, status, HTTPException, Depends
 from .schemas import LevelCreate, LevelResponse
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from .models import Level as LevelModel
-from sqlalchemy import select, update
+from .models import Level as LevelModel, UserLevel
+from sqlalchemy import select, update, delete
 
 from ..users import User as UserModel, get_current_user, get_max_lvl
 
@@ -32,7 +32,7 @@ async def get_level(id: int, db: AsyncSession = Depends(get_db)):
         )
     )
     if not level:
-        raise HTTPException(status_code=404, detail="Level not found")
+        raise HTTPException(status_code=404, detail="Роль не найдена.")
 
     return level
 
@@ -44,14 +44,21 @@ async def create_level(
     user: UserModel = Depends(get_current_user),
 ):
     """
-    Только для главного админа.\n
+    Только для 3,4 лвлов.\n
     Создаёт новую роль в БД.
     """
-    if await get_max_lvl(db, user) < 4:
+    if await get_max_lvl(db, user) < 4 and level.access_level >= 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only main admins can perform this action",
+            detail="Только гл. админы могут создавать новые админские роли.",
         )
+
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут создавать роли.",
+        )
+
     new_lvl = LevelModel(**level.model_dump())
     db.add(new_lvl)
     await db.commit()
@@ -69,12 +76,17 @@ async def update_level(
 ):
     """
     Только для гл. админа.\n
-    Обновляет категорию по её id.
+    Обновляет роль по её id.
     """
-    if await get_max_lvl(db, user) < 4:
+    if await get_max_lvl(db, user) < 4 and level.access_level >= 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only main admins can perform this action",
+            detail="Только гл. админы могут обновлять админские роли.",
+        )
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут обновлять роли.",
         )
 
     current_level = await db.scalar(
@@ -84,7 +96,7 @@ async def update_level(
         )
     )
     if not current_level:
-        raise HTTPException(status_code=404, detail="Level not found")
+        raise HTTPException(status_code=404, detail="Роль не найдена.")
 
     await db.execute(
         update(LevelModel).where(LevelModel.level_id == id).values(**level.model_dump())
@@ -101,14 +113,8 @@ async def delete_level(
 ):
     """
     Только для гл. админа\n
-    Удаляет категорию по её id.
+    Удаляет роль по её id.
     """
-    user_access = max([lvl for lvl in user.levels])
-    if user_access < 4:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only main admins can perform this action",
-        )
 
     current_level = await db.scalar(
         select(LevelModel).where(
@@ -117,8 +123,24 @@ async def delete_level(
         )
     )
     if not current_level:
-        raise HTTPException(status_code=404, detail="Level not found")
+        raise HTTPException(status_code=404, detail="Роль не найдена")
+
+    if await get_max_lvl(db, user) < 4 and current_level.access_level >= 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только гл. админы могут удалять админские роли.",
+        )
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут удалять роли.",
+        )
 
     current_level.is_active = False
 
-    return "Level deleted"
+    users_levels_for_delete = delete(UserLevel).where(UserLevel.level_id == id)
+    result = await db.execute(users_levels_for_delete)
+
+    await db.commit()
+
+    return "Роль успешно удалена."

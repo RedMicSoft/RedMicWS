@@ -5,6 +5,7 @@ from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..users import User as UserModel, get_current_user
 from sqlalchemy import select
+from dateutil.relativedelta import relativedelta
 
 router = APIRouter(
     prefix="/profiles",
@@ -37,11 +38,8 @@ async def create_profile(
 ):
     """
     Создаёт новый профиль, связанный с таблицей users \n
-    *user_id\n
-    avatar_url\n
-    age\n
+    avatar\n
     birth_date\n
-    *role\n
     """
     stmt = await db.scalar(
         select(ProfileModel).where(ProfileModel.user_id == user.user_id)

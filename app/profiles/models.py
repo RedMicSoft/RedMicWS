@@ -2,6 +2,7 @@ from sqlalchemy import ForeignKey, Date
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from datetime import date, datetime, timezone
 from sqlalchemy import Text, True_
+from dateutil.relativedelta import relativedelta
 
 from app.database import Base
 from app.projects import Project
@@ -14,7 +15,6 @@ class Profile(Base):
     profile_id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), unique=True)
     avatar: Mapped[str | None] = mapped_column(Text)
-    age: Mapped[int | None] = mapped_column()
     birth_date: Mapped[date | None] = mapped_column(Date)
     registered_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -32,6 +32,12 @@ class Profile(Base):
     series: Mapped[list["Series"]] = relationship(
         "Series", back_populates="profiles", secondary="profile_series"
     )
+
+    @property
+    def age(self):
+        if not self.birth_date:
+            return None
+        return relativedelta(date.today(), self.birth_date).years
 
 
 class ProfileSeries(Base):

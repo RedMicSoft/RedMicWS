@@ -22,15 +22,28 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/", response_model=list[UserResponse])
 async def get_users(
-    db: AsyncSession = Depends(get_db), user: UserModel = Depends(get_current_user)
+    role_filter: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
 ):
-    users = await db.scalars(select(UserModel).where(UserModel.is_active == True))
+    """
+    Выводит информацию о всех пользователях.\n
+    По умолчанию level_filter = None(null).\n
+    Если указано значение(наименование роли), то будут выведены пользователи только с указанной ролью.\n
+    """
+    if role_filter is not None:
+        db_users = await db.scalars(
+            select(UserModel)
+            .join(UserLevel, UserLevel.user_id == UserModel.user_id)
+            .join(Level, Level.level_id == UserLevel.level_id)
+            .where(Level.role_name == role_filter, UserModel.is_active == True)
+        )
+    else:
+        db_users = await db.scalars(
+            select(UserModel).where(UserModel.is_active == True)
+        )
 
-    user_level = await get_max_lvl(db, user)
-    if user_level < 3:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-
-    return users.all()
+    return db_users.all()
 
 
 @router.get("/{user_id}")
@@ -61,41 +74,11 @@ async def get_user(
     }
 
 
-# dev endpoint
-@router.post(
-    "/create", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-)
-async def crt_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    """
-    dev эндопинт для взаимодействия с БД без авторизации.
-    """
-    db_user = await db.scalar(
-        select(UserModel).where(
-            UserModel.nickname == user.nickname, UserModel.is_active == True
-        )
-    )
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Никнейм уже зарегистрирован",
-        )
-
-    db_user = UserModel(
-        nickname=user.nickname,
-        hashed_password=hash_password(user.password),
-    )
-    db.add(db_user)
-    await db.commit()
-    await db.refresh(db_user)
-    return db_user
-
-
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: UserCreate,
     db: AsyncSession = Depends(get_db),
     admin: UserModel = Depends(get_current_user),
-    role_name: str = Query(...),
 ):
     """
     Эндпоинт для прода. Предполагает уже созданного админа в БД. В разработке использовать POST users/create. \n
@@ -110,19 +93,12 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Только админы могут создавать пользователей",
         )
-    print(role_name)
     role = await db.scalar(
-        select(Level).where(Level.role_name == role_name, Level.is_active == True)
+        select(Level).where(Level.access_level == 0, Level.is_active == True)
     )
     if not role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Роль не найдена"
-        )
-
-    if await get_max_lvl(db, admin) == 3 and role.access_level >= 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Только ст. админы могут создавать новых админов",
         )
 
     db_user = await db.scalar(
@@ -174,7 +150,7 @@ async def login(
         )
     access_token = create_access_token(data={"id": user.user_id})
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"User": user, "access_token": access_token, "token_type": "bearer"}
 
 
 #

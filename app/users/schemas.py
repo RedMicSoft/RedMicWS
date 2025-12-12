@@ -17,7 +17,6 @@ class UserResponse(BaseModel):
 
     user_id: int
     nickname: str
-    hashed_password: str
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)

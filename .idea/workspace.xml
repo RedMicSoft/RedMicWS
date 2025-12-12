@@ -4,14 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="Alebmic DB migration history">
+    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="GET/POST/PUT projects endpoints&#10;small bug fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/levels/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/levels/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -174,7 +180,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764609648863</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="GET/POST/PUT projects endpoints&#10;small bug fixes">
+      <option name="closed" value="true" />
+      <created>1764717805291</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1764717805291</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -188,7 +202,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="main" />
+                        <option value="origin/main" />
                       </list>
                     </value>
                   </entry>
@@ -208,6 +222,7 @@
     <MESSAGE value="endpoints For projects&#10;change DB&#10;small bug fixes" />
     <MESSAGE value="endpoints For projects&#10;change DB&#10;small bug fixes" />
     <MESSAGE value="Alebmic DB migration history" />
-    <option name="LAST_COMMIT_MESSAGE" value="Alebmic DB migration history" />
+    <MESSAGE value="GET/POST/PUT projects endpoints&#10;small bug fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="GET/POST/PUT projects endpoints&#10;small bug fixes" />
   </component>
 </project>

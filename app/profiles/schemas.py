@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class ProfileCreate(BaseModel):
     avatar: str | None = Field(default=None)
-    age: int | None = Field(default=None)
     birth_date: date | None = Field(default=None)
 
 
