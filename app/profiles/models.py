@@ -21,11 +21,10 @@ class Profile(Base):
         default=lambda: datetime.now(), onupdate=lambda: datetime.now()
     )
     is_active: Mapped[bool] = mapped_column(default=True)
-
-    # deprecated, потом удалю мб
-    # projects: Mapped[list["Project"]] = relationship(
-    #     "Project", back_populates="profiles", secondary="project_profiles"
-    # )
+    description: Mapped[Text | None] = mapped_column(Text)
+    rest_start: Mapped[datetime | None] = mapped_column()
+    rest_end: Mapped[datetime | None] = mapped_column()
+    demo_url: Mapped[str | None] = mapped_column()
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 
@@ -38,6 +37,12 @@ class Profile(Base):
         if not self.birth_date:
             return None
         return relativedelta(date.today(), self.birth_date).years
+
+    @property
+    def rest(self):
+        if self.rest_start:
+            return relativedelta(date.today(), self.rest_end).days < 0
+        return False
 
 
 class ProfileSeries(Base):

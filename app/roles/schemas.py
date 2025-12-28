@@ -1,16 +1,26 @@
+from typing import Annotated
+
 from pydantic import Field, BaseModel
+from fastapi import Form
 
 
 class RoleCreate(BaseModel):
-    user_id: int
-    srt: str
+    profile_id: int
     name: str
-    result_url: str | None = Field(default=None)
+
+    @classmethod
+    def as_form(
+        cls,
+        profile_id: Annotated[int, Form(...)],
+        name: Annotated[str, Form(...)],
+    ) -> "RoleCreate":
+        return cls(profile_id=profile_id, name=name)
 
 
 class RoleResponse(BaseModel):
     role_id: int
-    user_id: int
+    profile_id: int
+    project_id: int
     srt: str
     name: str
     result_url: str

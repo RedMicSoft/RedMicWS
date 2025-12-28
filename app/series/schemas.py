@@ -19,3 +19,8 @@ class SeriesCreate(BaseModel):
     sound_engineer_minus: UserResponse
     timer: UserResponse
     translator: UserResponse
+
+
+class SeriesResponse(BaseModel):
+    project_id: int
+    title: str

@@ -9,8 +9,7 @@ class Role(Base):
 
     role_id: Mapped[int] = mapped_column(primary_key=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.profile_id"))
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.project_id"))
-    srt: Mapped[str] = mapped_column(Text)
+    srt_url: Mapped[str] = mapped_column()
     name: Mapped[str] = mapped_column()
     result_url: Mapped[str] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)

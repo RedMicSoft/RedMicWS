@@ -4,20 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="GET/POST/PUT projects endpoints&#10;small bug fixes">
+    <list default="true" id="4f040990-2216-4de3-9f31-c6c5f4dc27a9" name="Changes" comment="current version upd">
+      <change afterPath="$PROJECT_DIR$/app/profiles/utils.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/series/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/profiles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/profiles/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/roles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,6 +63,7 @@
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.database.executor&quot;: &quot;Run&quot;,
     &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.routes.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
@@ -73,7 +75,7 @@
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.database">
+  <component name="RunManager" selected="Python.routes">
     <configuration name="database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RedMicWS" />
       <option name="ENV_FILES" value="" />
@@ -118,8 +120,31 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="routes" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RedMicWS" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/app/series" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app/series/routes.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.routes" />
         <item itemvalue="Python.database" />
         <item itemvalue="Python.main" />
       </list>
@@ -188,7 +213,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764717805291</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="current version upd">
+      <option name="closed" value="true" />
+      <created>1765564425881</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1765564425881</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -223,6 +256,7 @@
     <MESSAGE value="endpoints For projects&#10;change DB&#10;small bug fixes" />
     <MESSAGE value="Alebmic DB migration history" />
     <MESSAGE value="GET/POST/PUT projects endpoints&#10;small bug fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="GET/POST/PUT projects endpoints&#10;small bug fixes" />
+    <MESSAGE value="current version upd" />
+    <option name="LAST_COMMIT_MESSAGE" value="current version upd" />
   </component>
 </project>
