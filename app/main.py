@@ -15,6 +15,7 @@ app.mount(
 async def root():
     return {"message": "Welcome!"}
 
+#adawd
 
 from app.users import router as user_router
 from app.profiles import router as profiles_router
