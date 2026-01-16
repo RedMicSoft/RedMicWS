@@ -17,7 +17,7 @@ from sqlalchemy import select
 from app.levels.models import Level, UserLevel
 from app.levels.schemas import LevelResponse
 
-router = APIRouter(prefix="/userss", tags=["userss"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserResponse])
