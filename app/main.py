@@ -15,7 +15,7 @@ app.mount(
 async def root():
     return {"message": "Welcome!"}
 
-#test com
+#test com 3
 
 from app.users import router as user_router
 from app.profiles import router as profiles_router
