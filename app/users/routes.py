@@ -30,7 +30,6 @@ async def get_users(
     Выводит информацию о всех пользователях.\n
     По умолчанию level_filter = None(null).\n
     Если указано значение(наименование роли), то будут выведены пользователи только с указанной ролью.\n
-    test ci\cd
     """
     if role_filter is not None:
         db_users = await db.scalars(
