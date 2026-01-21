@@ -209,3 +209,5 @@ __marimo__/
 # database
 app/database.py
 app/tests.py
+#media
+.media

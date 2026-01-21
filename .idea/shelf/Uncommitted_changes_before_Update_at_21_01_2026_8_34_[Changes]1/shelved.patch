@@ -1,0 +1,15 @@
+Index: app/tests.py
+===================================================================
+diff --git a/app/tests.py b/app/tests.py
+new file mode 100644
+--- /dev/null	(date 1768869736196)
++++ b/app/tests.py	(date 1768869736196)
+@@ -0,0 +1,8 @@
++import datetime
++from dateutil.relativedelta import relativedelta
++
++
++birth_date = "22.03.2005"
++parsed_date = datetime.datetime.strptime(birth_date, "%d.%m.%Y").date()
++
++print(type(relativedelta(datetime.date.today(), parsed_date).years))

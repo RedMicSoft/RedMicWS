@@ -83,8 +83,8 @@ class UserUpdate(BaseModel):
     Схема создания для POST/PUT запросов.
     """
 
-    nickname: str
-    join_date: date
-    birth_date: date | None
-    description: str | None
-    contacts: list[ContactCreate]
+    nickname: str | None = Field(default=None)
+    join_date: date | None = Field(default=None)
+    birth_date: date | None = Field(default=None)
+    description: str | None = Field(default=None)
+    contacts: list[ContactCreate] | None = Field(default=None)

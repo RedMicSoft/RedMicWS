@@ -166,8 +166,11 @@ async def login(
     Токен длится 30 дней.
     """
     db_user = await db.scalars(
-        select(UserModel).where(
-            UserModel.nickname == form_data.username, UserModel.is_active == True
+        select(UserModel)
+        .where(UserModel.nickname == form_data.username, UserModel.is_active == True)
+        .options(
+            selectinload(UserModel.team_roles),
+            selectinload(UserModel.contacts),
         )
     )
     user = db_user.first()
@@ -179,7 +182,7 @@ async def login(
         )
     access_token = create_access_token(data={"id": user.user_id})
 
-    return {"User": user, "access_token": access_token, "token_type": "bearer"}
+    return {"User": UsersResponse.model_validate(user), "access_token": access_token}
 
 
 #
@@ -262,22 +265,23 @@ async def update_user(
         .where(UserModel.user_id == user_id)
         .options(selectinload(UserModel.contacts))
     )
-    exist_contacts = {c.title: c for c in db_user.contacts}
+    if upd_user.contacts:
+        exist_contacts = {c.title: c for c in db_user.contacts}
 
-    for new_contact in upd_user.contacts:
-        if new_contact.title in exist_contacts:
-            exist_contacts[new_contact.title].link = new_contact.link
-            del exist_contacts[new_contact.title]
-        else:
-            db.add(ContactModel(**new_contact.model_dump(), user_id=user_id))
+        for new_contact in upd_user.contacts:
+            if new_contact.title in exist_contacts:
+                exist_contacts[new_contact.title].link = new_contact.link
+                del exist_contacts[new_contact.title]
+            else:
+                db.add(ContactModel(**new_contact.model_dump(), user_id=user_id))
 
-    for contact in exist_contacts.values():
-        await db.delete(contact)
+        for contact in exist_contacts.values():
+            await db.delete(contact)
 
     await db.execute(
         update(UserModel)
         .where(UserModel.user_id == user_id)
-        .values(**upd_user.model_dump(exclude={"contacts"}))
+        .values(**upd_user.model_dump(exclude={"contacts"}, exclude_unset=True))
     )
 
     await db.refresh(db_user, ["contacts"])
