@@ -2,10 +2,10 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-
+from pathlib import Path
 
 from app.database import get_db
 from .models import User as UserModel
@@ -17,6 +17,8 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 SECRET_KEY = "RedMicWorkSpaceRMWS"
 ALGORITHM = "HS256"
+
+MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / "media"
 
 
 def hash_password(password: str) -> str:
@@ -101,3 +103,39 @@ async def check_senior_admin(db: AsyncSession, user: UserModel) -> bool:
 
 async def check_curator(db: AsyncSession, user: UserModel) -> bool:
     return await get_max_lvl(db, user) == 2
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+async def save_demo(demo: UploadFile) -> str:
+    if not demo.filename.endswith(".mp4"):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Демо должно быть в формате .mp4"
+        )
+
+    directory = MEDIA_DIR / "demo"
+    directory.mkdir(parents=True, exist_ok=True)
+
+    content = await demo.read()
+    file_path = MEDIA_ROOT / "demo" / demo.filename
+    file_path.write_bytes(content)
+
+    return f"/media/demo/{demo.filename}"
+
+
+async def save_avatar(avatar: UploadFile) -> str:
+    if not avatar.filename.endswith((".webp", ".png", ".jpg", ".jpeg")):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Неверный формат аватарки"
+        )
+
+    directory = MEDIA_DIR / "avatars"
+    directory.mkdir(parents=True, exist_ok=True)
+
+    content = await avatar.read()
+    file_path = MEDIA_ROOT / "avatars" / avatar.filename
+    file_path.write_bytes(content)
+
+    return f"/media/avatars/{avatar.filename}"

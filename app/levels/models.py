@@ -13,7 +13,7 @@ class Level(Base):
 
     users: Mapped[list["User"]] = relationship(
         "User",
-        back_populates="levels",
+        back_populates="team_roles",
         secondary="user_level",
     )
 

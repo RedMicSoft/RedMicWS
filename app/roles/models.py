@@ -8,7 +8,7 @@ class Role(Base):
     __tablename__ = "roles"
 
     role_id: Mapped[int] = mapped_column(primary_key=True)
-    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.profile_id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
     srt_url: Mapped[str] = mapped_column()
     name: Mapped[str] = mapped_column()
     result_url: Mapped[str] = mapped_column()
@@ -26,3 +26,18 @@ class RoleSeries(Base):
 
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.role_id"), primary_key=True)
     series_id: Mapped[int] = mapped_column(ForeignKey("series.id"), primary_key=True)
+
+
+class RoleHistory(Base):
+    __tablename__ = "role_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    project_name: Mapped[str] = mapped_column()
+    role_name: Mapped[str] = mapped_column()
+    image_url: Mapped[str] = mapped_column()
+
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="history",
+    )

@@ -12,4 +12,4 @@ class LevelResponse(BaseModel):
     access_level: int
     is_active: bool
 
-    ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)

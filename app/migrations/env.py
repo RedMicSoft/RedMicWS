@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.database import Base
 from app.roles import Role, RoleSeries
-from app.profiles import Profile, ProfileSeries
+
+# from app.profiles import Profile, ProfileSeries
 from app.projects import Project, ProjectLink, ProjectUser
 from app.series import Series
-from app.users import User
+from app.users.models import User, UserSeries, Contacts
 from app.levels.models import Level, UserLevel
 
 # this is the Alembic Config object, which provides

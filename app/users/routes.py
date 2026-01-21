@@ -1,9 +1,16 @@
-from fastapi import APIRouter, status, HTTPException, Depends, Query
+from fastapi import APIRouter, status, HTTPException, Depends, Query, UploadFile
+from fastapi.openapi.models import Contact
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from .schemas import UserResponse, UserCreate
-from .models import User as UserModel
+from .schemas import (
+    UserResponse,
+    UserCreate,
+    UsersResponse,
+    ContactResponse,
+    UserUpdate,
+)
+from .models import User as UserModel, Contacts as ContactModel
 from .utils import (
     hash_password,
     verify_password,
@@ -12,15 +19,19 @@ from .utils import (
     get_max_lvl,
     check_admin,
     check_senior_admin,
+    save_avatar,
+    save_demo,
 )
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 from app.levels.models import Level, UserLevel
 from app.levels.schemas import LevelResponse
+from app.roles.schemas import RoleHistory
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/", response_model=list[UserResponse])
+@router.get("/", response_model=list[UsersResponse])
 async def get_users(
     role_filter: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -32,18 +43,22 @@ async def get_users(
     Если указано значение(наименование роли), то будут выведены пользователи только с указанной ролью.\n
     """
     if role_filter is not None:
-        db_users = await db.scalars(
+        db_users = (
             select(UserModel)
             .join(UserLevel, UserLevel.user_id == UserModel.user_id)
             .join(Level, Level.level_id == UserLevel.level_id)
-            .where(Level.role_name == role_filter, UserModel.is_active == True)
-        )
-    else:
-        db_users = await db.scalars(
-            select(UserModel).where(UserModel.is_active == True)
+            .where(Level.role_name == role_filter)
         )
 
-    return db_users.all()
+    else:
+        db_users = select(UserModel).where(UserModel.is_active == True)
+
+    db_users = db_users.options(
+        selectinload(UserModel.contacts), selectinload(UserModel.team_roles)
+    )
+    users = await db.scalars(db_users)
+
+    return [UsersResponse.model_validate(user) for user in users.all()]
 
 
 @router.get("/{user_id}")
@@ -55,23 +70,37 @@ async def get_user(
     """
     Выводит подробную информацию о пользователе, включая список его ролей и макс левел.
     """
-    current_user_level = await get_max_lvl(db, user)
-    if current_user_level < 3:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-
-    request_user = await db.get(UserModel, user_id)
-    if not request_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    roles = await db.scalars(
-        select(Level).join(UserLevel).where(UserLevel.user_id == request_user.user_id)
+    db_user = await db.scalar(
+        select(UserModel)
+        .where(UserModel.user_id == user_id)
+        .options(
+            selectinload(UserModel.contacts),
+            selectinload(UserModel.team_roles),
+            selectinload(UserModel.history),
+        )
     )
-
-    return {
-        "User": request_user,
-        "roles": roles.all(),
-        "Max": await get_max_lvl(db, request_user),
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден.")
+    user_data = {
+        k: v
+        for k, v in db_user.__dict__.items()
+        if not k.startswith("_") and not k.startswith("rest")
     }
+    del user_data["hashed_password"]
+    if db_user.rest_start:
+        user_data["rest"] = {
+            "rest_start": db_user.rest_start,
+            "rest_end": db_user.rest_end,
+            "rest_reason": db_user.rest_reason,
+        }
+    else:
+        user_data["rest"] = None
+    if db_user.history:
+        user_data["roles"] = db_user.history
+    else:
+        user_data["roles"] = None
+    response = UserResponse(**user_data)
+    return response
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -96,15 +125,9 @@ async def create_user(
     role = await db.scalar(
         select(Level).where(Level.access_level == 0, Level.is_active == True)
     )
-    if not role:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Роль не найдена"
-        )
 
     db_user = await db.scalar(
-        select(UserModel).where(
-            UserModel.nickname == user.nickname, UserModel.is_active == True
-        )
+        select(UserModel).where(UserModel.nickname == user.nickname)
     )
 
     if db_user:
@@ -114,12 +137,18 @@ async def create_user(
         )
 
     db_user = UserModel(
-        nickname=user.nickname,
-        hashed_password=hash_password(user.password),
+        **user.model_dump(exclude={"password", "contacts"}),
+        hashed_password=hash_password(user.password)
     )
     db.add(db_user)
     await db.flush()
-    await db.refresh(db_user)
+
+    for contact in user.contacts:
+        db.add(
+            ContactModel(
+                user_id=db_user.user_id, title=contact.title, link=contact.link
+            )
+        )
 
     user_role = UserLevel(level_id=role.level_id, user_id=db_user.user_id)
     db.add(user_role)
@@ -214,3 +243,97 @@ async def add_user_level(
     )
 
     return roles_list.all()
+
+
+@router.patch("/{user_id}", status_code=status.HTTP_200_OK)
+async def update_user(
+    user_id: int,
+    upd_user: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 3 and user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только владелец страницы и администраторы могут редактировать эту страницу.",
+        )
+    db_user = await db.scalar(
+        select(UserModel)
+        .where(UserModel.user_id == user_id)
+        .options(selectinload(UserModel.contacts))
+    )
+    exist_contacts = {c.title: c for c in db_user.contacts}
+
+    for new_contact in upd_user.contacts:
+        if new_contact.title in exist_contacts:
+            exist_contacts[new_contact.title].link = new_contact.link
+            del exist_contacts[new_contact.title]
+        else:
+            db.add(ContactModel(**new_contact.model_dump(), user_id=user_id))
+
+    for contact in exist_contacts.values():
+        await db.delete(contact)
+
+    await db.execute(
+        update(UserModel)
+        .where(UserModel.user_id == user_id)
+        .values(**upd_user.model_dump(exclude={"contacts"}))
+    )
+
+    await db.refresh(db_user, ["contacts"])
+    await db.commit()
+
+    return db_user
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_200_OK)
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    pass
+
+
+@router.put("/{user_id}/avatar", status_code=status.HTTP_200_OK)
+async def update_user_avatar(
+    user_id: int,
+    avatar: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 3 and user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только владелец страницы и администраторы могут сменить эту аватарку.",
+        )
+
+    user = await db.get(UserModel, user_id)
+    user.avatar_url = await save_avatar(avatar)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user.avatar_url
+
+
+@router.put("/{user_id}/demo", status_code=status.HTTP_200_OK)
+async def update_user_demo(
+    user_id: int,
+    demo: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 3 and user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только владелец страницы и администраторы могут сменить эту аватарку.",
+        )
+
+    user = await db.get(UserModel, user_id)
+    user.demo_url = await save_demo(demo)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user.demo_url

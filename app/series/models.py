@@ -27,12 +27,6 @@ class Series(Base):
     created_at: Mapped[datetime] = mapped_column(Date, default=lambda: datetime.now())
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    profiles: Mapped[list["Profile"]] = relationship(
-        "Profile",
-        back_populates="series",
-        secondary="profile_series",
-    )
-
     roles: Mapped[list[Role]] = relationship(
         Role,
         back_populates="series",
