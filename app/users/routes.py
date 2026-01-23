@@ -265,10 +265,11 @@ async def update_user(
         .where(UserModel.user_id == user_id)
         .options(selectinload(UserModel.contacts))
     )
-    if upd_user.contacts:
+    new_contacts = upd_user.__dict__.pop("contacts")
+    if new_contacts:
         exist_contacts = {c.title: c for c in db_user.contacts}
 
-        for new_contact in upd_user.contacts:
+        for new_contact in new_contacts:
             if new_contact.title in exist_contacts:
                 exist_contacts[new_contact.title].link = new_contact.link
                 del exist_contacts[new_contact.title]
@@ -278,11 +279,12 @@ async def update_user(
         for contact in exist_contacts.values():
             await db.delete(contact)
 
-    await db.execute(
-        update(UserModel)
-        .where(UserModel.user_id == user_id)
-        .values(**upd_user.model_dump(exclude={"contacts"}, exclude_unset=True))
-    )
+    if any([change for change in upd_user.__dict__.values()]):
+        await db.execute(
+            update(UserModel)
+            .where(UserModel.user_id == user_id)
+            .values(**upd_user.model_dump(exclude={"contacts"}, exclude_unset=True))
+        )
 
     await db.refresh(db_user, ["contacts"])
     await db.commit()
