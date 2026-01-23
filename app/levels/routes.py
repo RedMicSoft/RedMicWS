@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .models import Level as LevelModel, UserLevel
 from sqlalchemy import select, update, delete
 
-from ..users import User as UserModel, get_current_user, get_max_lvl
+from ..users.models import User as UserModel
+from app.users.utils import get_current_user, get_max_lvl
 
 router = APIRouter(
     tags=["levels"],

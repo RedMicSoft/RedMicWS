@@ -22,8 +22,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
 
     contacts: Mapped[list["Contacts"]] = relationship(
-        "Contacts",
-        back_populates="user",
+        "Contacts", back_populates="user", cascade="all, delete-orphan"
     )
 
     team_roles: Mapped[list["Level"]] = relationship(
@@ -34,6 +33,12 @@ class User(Base):
 
     history: Mapped[list["RoleHistory"]] = relationship(
         "RoleHistory",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    roles: Mapped[list["Role"]] = relationship(
+        "Role",
         back_populates="user",
     )
 
@@ -52,7 +57,7 @@ class Contacts(Base):
     title: Mapped[str] = mapped_column()
     link: Mapped[str] = mapped_column()
 
-    user: Mapped[User] = relationship(
+    user: Mapped["User"] = relationship(
         "User",
         back_populates="contacts",
     )

@@ -22,6 +22,9 @@ class UserLevel(Base):
     __tablename__ = "user_level"
 
     level_id: Mapped[int] = mapped_column(
-        ForeignKey("levels.level_id"), primary_key=True
+        ForeignKey("levels.level_id", ondelete="CASCADE"),
+        primary_key=True,
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )

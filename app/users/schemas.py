@@ -20,7 +20,7 @@ class ContactResponse(BaseModel):
 
 class UserCreate(BaseModel):
     """
-    Схема создания для POST/PUT запросов.
+    Схема создания для POST запросов.
     """
 
     nickname: str
@@ -80,7 +80,7 @@ class UsersResponse(BaseModel):
 
 class UserUpdate(BaseModel):
     """
-    Схема создания для POST/PUT запросов.
+    Схема создания для PATCH запросов.
     """
 
     nickname: str | None = Field(default=None)
@@ -88,3 +88,9 @@ class UserUpdate(BaseModel):
     birth_date: date | None = Field(default=None)
     description: str | None = Field(default=None)
     contacts: list[ContactCreate] | None = Field(default=None)
+
+
+class RestCreate(BaseModel):
+    rest_start: date
+    rest_end: date
+    rest_reason: str

@@ -5,12 +5,14 @@ from app.users.utils import scheduler
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+DELETED_USER_ID = -1  # Здесь айди удаленного пользователя в БД
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("Запуск сервера...")
     scheduler.start()
-
+    print(DELETED_USER_ID)
     yield
 
     print("Остановка сервера...")
@@ -32,7 +34,7 @@ async def root():
 
 # test com 3
 
-from app.users import router as user_router
+from app.users.routes import router as user_router
 from app.levels.routes import router as levels_router
 from app.projects.routes import router as projects_router
 from app.series.routes import router as series_router

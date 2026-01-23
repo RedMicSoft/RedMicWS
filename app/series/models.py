@@ -2,7 +2,7 @@ from sqlalchemy import ForeignKey, Date, Text
 from datetime import datetime, date, timezone
 from app.database import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from ..roles import Role, RoleSeries
+from app.main import DELETED_USER_ID
 
 
 class Series(Base):
@@ -19,16 +19,36 @@ class Series(Base):
     srt_url: Mapped[str] = mapped_column()
     ass_url: Mapped[str] = mapped_column()
     result_url: Mapped[str] = mapped_column()
-    curator: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
-    sound_engineer: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
-    sound_engineer_minus: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
-    timer: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
-    translator: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    curator: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+    )
+    sound_engineer: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+    )
+    sound_engineer_minus: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+    )
+    timer: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+    )
+    translator: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+    )
     created_at: Mapped[datetime] = mapped_column(Date, default=lambda: datetime.now())
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    roles: Mapped[list[Role]] = relationship(
-        Role,
+    roles: Mapped[list["Role"]] = relationship(
+        "Role",
         back_populates="series",
-        secondary=RoleSeries.__table__,
+        secondary="role_series",
     )

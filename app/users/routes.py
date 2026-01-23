@@ -11,6 +11,7 @@ from .schemas import (
     UsersResponse,
     ContactResponse,
     UserUpdate,
+    RestCreate,
 )
 from .models import User as UserModel, Contacts as ContactModel
 from .utils import (
@@ -23,6 +24,7 @@ from .utils import (
     check_senior_admin,
     save_avatar,
     save_demo,
+    get_id_deleted_user,
 )
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
@@ -140,7 +142,7 @@ async def create_user(
 
     db_user = UserModel(
         **user.model_dump(exclude={"password", "contacts"}),
-        hashed_password=hash_password(user.password)
+        hashed_password=hash_password(user.password),
     )
     db.add(db_user)
     await db.flush()
@@ -304,6 +306,7 @@ async def update_user(
     await db.refresh(db_user, ["contacts"])
     await db.commit()
 
+    db_user.__dict__.pop("hashed_password")
     return db_user
 
 
@@ -313,7 +316,31 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
-    pass
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только администраторы могут удалять пользователей.",
+        )
+
+    user_for_delete = await db.get(UserModel, user_id)
+    if not user_for_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не существует"
+        )
+
+    if user_for_delete.user_id == get_id_deleted_user():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нельзя удалить удалённого пользователя.",
+        )
+
+    if await get_max_lvl(db, user_for_delete) >= await get_max_lvl(db, user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+    await db.delete(user_for_delete)
+    await db.commit()
+
+    return f"Пользователь был удалён."
 
 
 @router.put("/{user_id}/avatar", status_code=status.HTTP_200_OK)
@@ -362,9 +389,7 @@ async def update_user_demo(
 
 @router.post("/{user_id}/rest", status_code=status.HTTP_201_CREATED)
 async def create_rest(
-    rest_start: date,
-    rest_end: date,
-    rest_reason: str,
+    rest: RestCreate,
     user_id: int,
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
@@ -383,12 +408,95 @@ async def create_rest(
             detail="Такого пользователя не существует.",
         )
 
-    db_user.rest_start = rest_start
-    db_user.rest_end = rest_end
-    db_user.rest_reason = rest_reason
+    await db.execute(
+        update(UserModel)
+        .where(UserModel.user_id == user_id)
+        .values(**rest.model_dump())
+    )
     db_user.is_active = False
 
     await db.commit()
     await db.refresh(db_user)
 
+    db_user.__dict__.pop("hashed_password")
     return db_user
+
+
+@router.delete("/{user_id}/rest", status_code=status.HTTP_200_OK)
+async def delete_rest(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2 and user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только владелец страницы или куратор и выше могут удалить этот рест.",
+        )
+
+    db_user = await db.scalar(select(UserModel).where(UserModel.user_id == user_id))
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такого пользователя не существует.",
+        )
+
+    db_user.rest_start = None
+    db_user.rest_end = None
+    db_user.rest_reason = None
+    db_user.is_active = True
+
+    await db.commit()
+    await db.refresh(db_user)
+
+    db_user.__dict__.pop("hashed_password")
+    return db_user
+
+
+@router.delete("/{user_id}/levels/{level_id}", status_code=status.HTTP_200_OK)
+async def delete_level(
+    user_id: int,
+    level_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут менять пользователям роли.",
+        )
+
+    db_user = await db.scalar(
+        select(UserModel)
+        .where(UserModel.user_id == user_id)
+        .options(selectinload(UserModel.team_roles))
+    )
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
+        )
+
+    db_level = await db.get(Level, level_id)
+    if not db_level:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    if db_level.access_level == 4 or db_level.access_level == 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Данную роль удалить нельзя."
+        )
+
+    user_level = await db.get(UserLevel, (db_level.level_id, db_user.user_id))
+    if not user_level:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="У пользователя нет данной роли.",
+        )
+
+    await db.delete(user_level)
+    await db.commit()
+    await db.refresh(db_user)
+
+    return db_user.team_roles

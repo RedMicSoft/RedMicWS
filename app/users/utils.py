@@ -148,7 +148,7 @@ async def save_avatar(avatar: UploadFile) -> str:
 
 
 async def check_and_update_rest():
-    async with async_session_maker as db:
+    async with async_session_maker() as db:
         stmt = (
             update(UserModel)
             .where(UserModel.rest_end <= date.today())
@@ -166,3 +166,12 @@ async def check_and_update_rest():
 scheduler.add_job(
     check_and_update_rest, CronTrigger(hour=0, minute=0), id="daily_rest_check"
 )
+
+
+async def get_id_deleted_user():
+    async with async_session_maker() as db:
+        del_user = await db.scalar(
+            select(UserModel).where(UserModel.nickname == "deleted")
+        )
+
+    return del_user.user_id
