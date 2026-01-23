@@ -1,8 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from app.users.utils import scheduler
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    print("Запуск сервера...")
+    scheduler.start()
+
+    yield
+
+    print("Остановка сервера...")
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.mount(
     "/media",

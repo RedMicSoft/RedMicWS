@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, status, HTTPException, Depends, Query, UploadFile
 from fastapi.openapi.models import Contact
 from fastapi.security import OAuth2PasswordRequestForm
@@ -356,3 +358,37 @@ async def update_user_demo(
     await db.refresh(user)
 
     return user.demo_url
+
+
+@router.post("/{user_id}/rest", status_code=status.HTTP_201_CREATED)
+async def create_rest(
+    rest_start: date,
+    rest_end: date,
+    rest_reason: str,
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2 and user_id != user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только владелец страницы или куратор и выше могут создать этот рест.",
+        )
+
+    db_user = await db.scalar(select(UserModel).where(UserModel.user_id == user_id))
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такого пользователя не существует.",
+        )
+
+    db_user.rest_start = rest_start
+    db_user.rest_end = rest_end
+    db_user.rest_reason = rest_reason
+    db_user.is_active = False
+
+    await db.commit()
+    await db.refresh(db_user)
+
+    return db_user

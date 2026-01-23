@@ -1,17 +1,23 @@
+import time
+
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import jwt
 from fastapi import Depends, HTTPException, status, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from pathlib import Path
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
-from app.database import get_db
+
+from app.database import get_db, async_session_maker
 from .models import User as UserModel
 
 from app.levels.models import UserLevel, Level as LevelModel
 
+scheduler = AsyncIOScheduler()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
@@ -139,3 +145,24 @@ async def save_avatar(avatar: UploadFile) -> str:
     file_path.write_bytes(content)
 
     return f"/media/avatars/{avatar.filename}"
+
+
+async def check_and_update_rest():
+    async with async_session_maker as db:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.rest_end <= date.today())
+            .values(
+                rest_start=None,
+                rest_end=None,
+                rest_reason=None,
+                is_active=True,
+            )
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+
+scheduler.add_job(
+    check_and_update_rest, CronTrigger(hour=0, minute=0), id="daily_rest_check"
+)
