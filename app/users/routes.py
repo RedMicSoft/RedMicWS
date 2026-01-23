@@ -55,7 +55,7 @@ async def get_users(
         )
 
     else:
-        db_users = select(UserModel).where(UserModel.is_active == True)
+        db_users = select(UserModel)
 
     db_users = db_users.options(
         selectinload(UserModel.contacts), selectinload(UserModel.team_roles)

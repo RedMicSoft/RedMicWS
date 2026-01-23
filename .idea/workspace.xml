@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="new deleted user id">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -207,7 +208,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769159236043</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="new deleted user id">
+      <option name="closed" value="true" />
+      <created>1769159797846</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1769159797846</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -228,6 +237,7 @@
     <MESSAGE value="add CRON triggers for daily rest updating" />
     <MESSAGE value="remove users_series table" />
     <MESSAGE value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
-    <option name="LAST_COMMIT_MESSAGE" value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
+    <MESSAGE value="new deleted user id" />
+    <option name="LAST_COMMIT_MESSAGE" value="new deleted user id" />
   </component>
 </project>
