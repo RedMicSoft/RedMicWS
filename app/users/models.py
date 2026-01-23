@@ -56,10 +56,3 @@ class Contacts(Base):
         "User",
         back_populates="contacts",
     )
-
-
-class UserSeries(Base):
-    __tablename__ = "users_series"
-
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
-    series_id: Mapped[int] = mapped_column(ForeignKey("series.id"), primary_key=True)

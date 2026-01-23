@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="endpoints GET users/{user_id} and users/login also returns &quot;accessLevel&quot; : max_lvl pair">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="add CRON triggers for daily rest updating">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -101,7 +98,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769132850918</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="add CRON triggers for daily rest updating">
+      <option name="closed" value="true" />
+      <created>1769136098701</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1769136098701</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -119,6 +124,7 @@
     <MESSAGE value="migration fix" />
     <MESSAGE value="PATCH users/{user_id} fix only contacts changes." />
     <MESSAGE value="endpoints GET users/{user_id} and users/login also returns &quot;accessLevel&quot; : max_lvl pair" />
-    <option name="LAST_COMMIT_MESSAGE" value="endpoints GET users/{user_id} and users/login also returns &quot;accessLevel&quot; : max_lvl pair" />
+    <MESSAGE value="add CRON triggers for daily rest updating" />
+    <option name="LAST_COMMIT_MESSAGE" value="add CRON triggers for daily rest updating" />
   </component>
 </project>

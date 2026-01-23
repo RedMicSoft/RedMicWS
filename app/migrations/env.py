@@ -12,7 +12,7 @@ from app.roles import Role, RoleSeries
 # from app.profiles import Profile, ProfileSeries
 from app.projects import Project, ProjectLink, ProjectUser
 from app.series import Series
-from app.users.models import User, UserSeries, Contacts
+from app.users.models import User, Contacts
 from app.levels.models import Level, UserLevel
 
 # this is the Alembic Config object, which provides
