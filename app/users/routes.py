@@ -100,7 +100,7 @@ async def get_user(
     else:
         user_data["roles"] = None
     response = UserResponse(**user_data)
-    return response
+    return {"User": response, "accessLevel": await get_max_lvl(db, db_user)}
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -182,7 +182,11 @@ async def login(
         )
     access_token = create_access_token(data={"id": user.user_id})
 
-    return {"User": UsersResponse.model_validate(user), "access_token": access_token}
+    return {
+        "User": UsersResponse.model_validate(user),
+        "access_token": access_token,
+        "accessLevel": await get_max_lvl(db, user),
+    }
 
 
 #
@@ -260,6 +264,15 @@ async def update_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только владелец страницы и администраторы могут редактировать эту страницу.",
         )
+
+    nickname_exist = await db.scalar(
+        select(UserModel.nickname).where(UserModel.nickname == upd_user.nickname)
+    )
+    if nickname_exist:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Данный никнейм уже занят."
+        )
+
     db_user = await db.scalar(
         select(UserModel)
         .where(UserModel.user_id == user_id)
