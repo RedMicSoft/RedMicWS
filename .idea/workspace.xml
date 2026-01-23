@@ -4,22 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="remove users_series table">
-      <change afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/levels/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/roles/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -213,7 +199,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769137141759</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role">
+      <option name="closed" value="true" />
+      <created>1769159236043</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1769159236043</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -233,6 +227,7 @@
     <MESSAGE value="endpoints GET users/{user_id} and users/login also returns &quot;accessLevel&quot; : max_lvl pair" />
     <MESSAGE value="add CRON triggers for daily rest updating" />
     <MESSAGE value="remove users_series table" />
-    <option name="LAST_COMMIT_MESSAGE" value="remove users_series table" />
+    <MESSAGE value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
+    <option name="LAST_COMMIT_MESSAGE" value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
   </component>
 </project>
