@@ -3,7 +3,7 @@ from pydantic import computed_field, BaseModel, Field, ConfigDict, EmailStr, Fie
 from dateutil.relativedelta import relativedelta
 
 from app.levels.schemas import LevelResponse
-from app.roles.schemas import RoleHistory
+from app.roles.schemas import RoleHistoryResponse
 
 
 class ContactCreate(BaseModel):
@@ -46,7 +46,7 @@ class UserResponse(BaseModel):
     demo_url: str | None
     avatar_url: str | None
     team_roles: list[LevelResponse]
-    roles: list[RoleHistory] | None
+    roles: list[RoleHistoryResponse] | None
     is_active: bool
 
     @computed_field

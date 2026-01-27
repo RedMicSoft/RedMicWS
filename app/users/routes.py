@@ -24,12 +24,14 @@ from .utils import (
     save_avatar,
     save_demo,
     get_id_deleted_user,
+    save_role_image,
 )
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload, with_loader_criteria
 from app.levels.models import Level, UserLevel
 from app.levels.schemas import LevelResponse
-from app.roles.schemas import RoleHistory
+from app.roles.schemas import RoleHistoryResponse, RoleHistoryCreate
+from app.roles.models import RoleHistory, Role
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -509,3 +511,59 @@ async def delete_level(
     await db.refresh(db_user)
 
     return db_user.team_roles
+
+
+@router.post("/{user_id}/roles", status_code=status.HTTP_201_CREATED)
+async def add_role(
+    user_id: int,
+    image: UploadFile | None = None,
+    role: RoleHistoryCreate = Depends(RoleHistoryCreate.as_form),
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Роль в историю может добавить только куратор и выше.",
+        )
+
+    db_user = await db.scalar(select(UserModel).where(UserModel.user_id == user_id))
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
+        )
+
+    if image:
+        image_url = await save_role_image(image)
+
+    new_role = RoleHistory(**role.model_dump(), user_id=user_id, image_url=image_url)
+    db.add(new_role)
+
+    await db.commit()
+
+    return new_role
+
+
+@router.delete("/roles/{role_id}", status_code=status.HTTP_200_OK)
+async def delete_role(
+    role_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только куратор и выше могут удалить роль.",
+        )
+
+    db_role = await db.get(RoleHistory, role_id)
+    if not db_role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    await db.delete(db_role)
+    await db.commit()
+
+    return "Роль была удалена."

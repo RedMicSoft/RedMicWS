@@ -27,9 +27,22 @@ class RoleResponse(BaseModel):
     is_active: bool
 
 
-class RoleHistory(BaseModel):
+class RoleHistoryResponse(BaseModel):
     project_name: str
     role_name: str
-    image_url: str
+    image_url: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RoleHistoryCreate(BaseModel):
+    project_name: str
+    role_name: str
+
+    @classmethod
+    def as_form(
+        cls,
+        project_name: Annotated[str, Form(...)],
+        role_name: Annotated[str, Form(...)],
+    ) -> "RoleHistoryCreate":
+        return cls(project_name=project_name, role_name=role_name)

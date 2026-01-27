@@ -48,7 +48,7 @@ class RoleHistory(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
     project_name: Mapped[str] = mapped_column()
     role_name: Mapped[str] = mapped_column()
-    image_url: Mapped[str] = mapped_column()
+    image_url: Mapped[str | None] = mapped_column()
 
     user: Mapped["User"] = relationship(
         "User",

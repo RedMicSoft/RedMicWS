@@ -142,6 +142,21 @@ async def save_avatar(avatar: UploadFile) -> str:
     return f"/media/avatars/{filename}"
 
 
+async def save_role_image(image: UploadFile) -> str:
+    if not image.filename.endswith((".webp", ".png", ".jpg", ".jpeg")):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Неверный формат фото.")
+
+    directory = MEDIA_DIR / "roles"
+    directory.mkdir(parents=True, exist_ok=True)
+
+    content = await image.read()
+    filename = f"{uuid.uuid4()}{image.filename[image.filename.rfind("."):]}"
+    file_path = MEDIA_ROOT / "roles" / filename
+    file_path.write_bytes(content)
+
+    return f"/media/roles/{filename}"
+
+
 async def check_and_update_rest():
     async with async_session_maker() as db:
         rest_start = (

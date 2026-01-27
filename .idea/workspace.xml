@@ -4,8 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="rest fix">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="rest fix))))">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -263,7 +268,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769507911395</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="rest fix))))">
+      <option name="closed" value="true" />
+      <created>1769508090415</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1769508090415</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -290,6 +303,7 @@
     <MESSAGE value="fixes" />
     <MESSAGE value="avatar names uuid generation" />
     <MESSAGE value="rest fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="rest fix" />
+    <MESSAGE value="rest fix))))" />
+    <option name="LAST_COMMIT_MESSAGE" value="rest fix))))" />
   </component>
 </project>
