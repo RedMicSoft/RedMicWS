@@ -73,11 +73,7 @@ async def get_current_user(
         )
     except jwt.PyJWTError:
         raise credentials_exception
-    result = await db.scalars(
-        select(UserModel).where(
-            UserModel.user_id == user_id, UserModel.is_active == True
-        )
-    )
+    result = await db.scalars(select(UserModel).where(UserModel.user_id == user_id))
     user = result.first()
     if user is None:
         raise credentials_exception
