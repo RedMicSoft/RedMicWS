@@ -25,8 +25,8 @@ class UserCreate(BaseModel):
 
     nickname: str
     password: str
-    join_date: date
-    birth_date: date | None
+    join_date: date = Field(le=date.today())
+    birth_date: date | None = Field(le=date.today())
     description: str | None
     contacts: list[ContactCreate]
 
@@ -65,7 +65,7 @@ class UsersResponse(BaseModel):
     birth_date: date | None
     contacts: list[ContactResponse]
     avatar_url: str | None
-    team_roles: list[LevelResponse]
+    team_roles: list[LevelResponse] = []
     is_active: bool
 
     @computed_field
@@ -84,8 +84,8 @@ class UserUpdate(BaseModel):
     """
 
     nickname: str | None = Field(default=None)
-    join_date: date | None = Field(default=None)
-    birth_date: date | None = Field(default=None)
+    join_date: date | None = Field(default=None, ge=date.today())
+    birth_date: date | None = Field(default=None, ge=date.today())
     description: str | None = Field(default=None)
     contacts: list[ContactCreate] | None = Field(default=None)
 

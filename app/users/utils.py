@@ -149,7 +149,13 @@ async def save_avatar(avatar: UploadFile) -> str:
 
 async def check_and_update_rest():
     async with async_session_maker() as db:
-        stmt = (
+        rest_start = (
+            update(UserModel)
+            .where(UserModel.rest_start == date.today())
+            .values(is_active=False)
+        )
+
+        rest_end = (
             update(UserModel)
             .where(UserModel.rest_end < date.today())
             .values(
@@ -159,7 +165,7 @@ async def check_and_update_rest():
                 is_active=True,
             )
         )
-        await db.execute(stmt)
+        await db.execute(rest_end)
         await db.commit()
 
 

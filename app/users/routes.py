@@ -1,7 +1,6 @@
 from datetime import date
 
 from fastapi import APIRouter, status, HTTPException, Depends, Query, UploadFile
-from fastapi.openapi.models import Contact
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -27,7 +26,7 @@ from .utils import (
     get_id_deleted_user,
 )
 from sqlalchemy import select, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_loader_criteria
 from app.levels.models import Level, UserLevel
 from app.levels.schemas import LevelResponse
 from app.roles.schemas import RoleHistory
@@ -58,7 +57,9 @@ async def get_users(
         db_users = select(UserModel)
 
     db_users = db_users.options(
-        selectinload(UserModel.contacts), selectinload(UserModel.team_roles)
+        selectinload(UserModel.contacts),
+        selectinload(UserModel.team_roles),
+        with_loader_criteria(Level, Level.access_level != 0),
     )
     users = await db.scalars(db_users)
 
@@ -81,6 +82,7 @@ async def get_user(
             selectinload(UserModel.contacts),
             selectinload(UserModel.team_roles),
             selectinload(UserModel.history),
+            with_loader_criteria(Level, Level.access_level != 0),
         )
     )
     if not db_user:
@@ -171,7 +173,7 @@ async def login(
     """
     db_user = await db.scalars(
         select(UserModel)
-        .where(UserModel.nickname == form_data.username, UserModel.is_active == True)
+        .where(UserModel.nickname == form_data.username)
         .options(
             selectinload(UserModel.team_roles),
             selectinload(UserModel.contacts),
@@ -210,10 +212,10 @@ async def add_user_level(
     Возвращает список ролей.\n
     Только для 3 лвл+.\n
     """
-    if not await check_admin(db, user) and not await check_senior_admin(db, user):
+    if await get_max_lvl(db, user) < 2:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут добавить пользователю роль",
+            detail="Недостаточно прав.",
         )
 
     db_user = await db.scalar(
@@ -234,16 +236,16 @@ async def add_user_level(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Роль не найдена"
         )
 
-    if role.access_level == 4:
+    if role.access_level == 4 or role.access_level == 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Добавить роль ст. админа можно только редактированием БД.",
+            detail="Только редактированием БД.",
         )
 
-    if role.access_level >= 3 and await get_max_lvl(db, user) == 3:
+    if role.access_level >= await get_max_lvl(db, user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только ст. админы могут добавлять роли админов.",
+            detail="Можно выдавать роли только ниже своей роли.",
         )
 
     new_role = UserLevel(level_id=role.level_id, user_id=user_id)
@@ -413,7 +415,8 @@ async def create_rest(
         .where(UserModel.user_id == user_id)
         .values(**rest.model_dump())
     )
-    db_user.is_active = False
+    if rest.rest_start == date.today():
+        db_user.is_active = False
 
     await db.commit()
     await db.refresh(db_user)

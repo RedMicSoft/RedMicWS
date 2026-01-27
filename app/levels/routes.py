@@ -19,7 +19,11 @@ async def get_levels(db: AsyncSession = Depends(get_db)):
     """
     Возвращает все роли.
     """
-    levels = await db.scalars(select(LevelModel).where(LevelModel.is_active == True))
+    levels = await db.scalars(
+        select(LevelModel).where(
+            LevelModel.is_active == True, LevelModel.access_level != 0
+        )
+    )
 
     return levels.all()
 
