@@ -175,7 +175,7 @@ async def check_and_update_rest():
                 is_active=True,
             )
         )
-        await db.execute(rest_end)
+        await db.execute(rest_end, rest_start)
         await db.commit()
 
 
