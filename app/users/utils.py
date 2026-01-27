@@ -1,5 +1,3 @@
-import time
-
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, date
@@ -10,7 +8,7 @@ from sqlalchemy import select, update
 from pathlib import Path
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-
+import uuid
 
 from app.database import get_db, async_session_maker
 from .models import User as UserModel
@@ -141,10 +139,11 @@ async def save_avatar(avatar: UploadFile) -> str:
     directory.mkdir(parents=True, exist_ok=True)
 
     content = await avatar.read()
-    file_path = MEDIA_ROOT / "avatars" / avatar.filename
+    filename = f"{uuid.uuid4()}{avatar.filename[avatar.filename.rfind("."):]}"
+    file_path = MEDIA_ROOT / "avatars" / filename
     file_path.write_bytes(content)
 
-    return f"/media/avatars/{avatar.filename}"
+    return f"/media/avatars/{filename}"
 
 
 async def check_and_update_rest():
