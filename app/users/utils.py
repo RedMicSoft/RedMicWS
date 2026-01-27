@@ -46,7 +46,7 @@ def create_access_token(data: dict) -> str:
     создаёт JWT с id, exp
     """
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -151,7 +151,7 @@ async def check_and_update_rest():
     async with async_session_maker() as db:
         stmt = (
             update(UserModel)
-            .where(UserModel.rest_end <= date.today())
+            .where(UserModel.rest_end < date.today())
             .values(
                 rest_start=None,
                 rest_end=None,
