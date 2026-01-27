@@ -146,7 +146,7 @@ async def check_and_update_rest():
     async with async_session_maker() as db:
         rest_start = (
             update(UserModel)
-            .where(UserModel.rest_start == date.today())
+            .where(UserModel.rest_start <= date.today())
             .values(is_active=False)
         )
 
