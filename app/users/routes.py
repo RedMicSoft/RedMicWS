@@ -534,10 +534,11 @@ async def add_role(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
         )
 
+    new_role = RoleHistory(**role.model_dump(), user_id=user_id)
     if image:
         image_url = await save_role_image(image)
+        new_role.image = image_url
 
-    new_role = RoleHistory(**role.model_dump(), user_id=user_id, image_url=image_url)
     db.add(new_role)
 
     await db.commit()
