@@ -28,6 +28,7 @@ class RoleResponse(BaseModel):
 
 
 class RoleHistoryResponse(BaseModel):
+    id: int
     project_name: str
     role_name: str
     image_url: str | None
