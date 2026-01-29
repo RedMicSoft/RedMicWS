@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from pydantic import computed_field, BaseModel, Field, ConfigDict, EmailStr, Field
 from dateutil.relativedelta import relativedelta
+from typing import Optional
 
 from app.levels.schemas import LevelResponse
 from app.roles.schemas import RoleHistoryResponse
@@ -84,8 +85,8 @@ class UserUpdate(BaseModel):
     """
 
     nickname: str | None = Field(default=None)
-    join_date: date | None = Field(default=None, ge=date.today())
-    birth_date: date | None = Field(default=None, ge=date.today())
+    join_date: Optional[date] = Field(default=None, ge=date.today())
+    birth_date: Optional[date] = Field(default=None, ge=date.today())
     description: str | None = Field(default=None)
     contacts: list[ContactCreate] | None = Field(default=None)
 

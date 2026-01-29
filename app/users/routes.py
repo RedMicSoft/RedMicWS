@@ -412,6 +412,12 @@ async def create_rest(
             detail="Такого пользователя не существует.",
         )
 
+    if rest.rest_start < date.today() and rest.rest_end < date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя установить рест в прошлое)",
+        )
+
     if rest.rest_start > rest.rest_end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

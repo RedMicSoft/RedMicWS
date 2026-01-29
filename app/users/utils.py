@@ -158,6 +158,7 @@ async def save_role_image(image: UploadFile) -> str:
 
 
 async def check_and_update_rest():
+    print("Старт обновления рестов...")
     async with async_session_maker() as db:
         rest_start = (
             update(UserModel)
@@ -175,8 +176,10 @@ async def check_and_update_rest():
                 is_active=True,
             )
         )
-        await db.execute(rest_end, rest_start)
+        await db.execute(rest_end)
+        await db.execute(rest_start)
         await db.commit()
+    print("Обновления рестов успешно закончены.")
 
 
 scheduler.add_job(

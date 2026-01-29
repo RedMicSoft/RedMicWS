@@ -211,3 +211,4 @@ app/database.py
 app/tests.py
 #media
 .media
+/media/
