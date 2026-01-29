@@ -2,7 +2,8 @@ from sqlalchemy import ForeignKey, Date
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from datetime import date, datetime, timezone
 from app.database import Base
-from app.main import DELETED_USER_ID
+
+DELETED_USER_ID = -1
 
 
 class Project(Base):

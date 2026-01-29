@@ -320,10 +320,10 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
-    if await get_max_lvl(db, user) < 3:
+    if await get_max_lvl(db, user) < 4:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только администраторы могут удалять пользователей.",
+            detail="Только гл. администраторы могут удалять пользователей.",
         )
 
     user_for_delete = await db.get(UserModel, user_id)

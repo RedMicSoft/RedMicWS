@@ -4,14 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="RoleHistoryResponse id add">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="patch fix">
+      <change afterPath="$PROJECT_DIR$/app/files/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/files/routes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/files/schemas.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/files/utils.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/links/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_21_01_2026_8_34_[Changes]1/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_21_01_2026_8_34__Changes_1.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alembic.ini" beforeDir="false" afterPath="$PROJECT_DIR$/alembic.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -325,7 +333,23 @@
       <option name="project" value="LOCAL" />
       <updated>1769595762914</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="minor fixes rests and PATCH users pydantic validate">
+      <option name="closed" value="true" />
+      <created>1769653303022</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1769653303022</updated>
+    </task>
+    <task id="LOCAL-00023" summary="patch fix">
+      <option name="closed" value="true" />
+      <created>1769682305901</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1769682305901</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -358,6 +382,8 @@
     <MESSAGE value="role history empty image fix" />
     <MESSAGE value="role history image fix" />
     <MESSAGE value="RoleHistoryResponse id add" />
-    <option name="LAST_COMMIT_MESSAGE" value="RoleHistoryResponse id add" />
+    <MESSAGE value="minor fixes rests and PATCH users pydantic validate" />
+    <MESSAGE value="patch fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="patch fix" />
   </component>
 </project>

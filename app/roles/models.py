@@ -2,7 +2,8 @@ from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from app.database import Base, get_db
-from app.main import DELETED_USER_ID
+
+DELETED_USER_ID = -1
 
 
 class Role(Base):
