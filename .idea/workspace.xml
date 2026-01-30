@@ -4,22 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="patch fix">
-      <change afterPath="$PROJECT_DIR$/app/files/models.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/files/routes.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/files/schemas.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/files/utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/links/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Upload files in ./files dir system">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/alembic.ini" beforeDir="false" afterPath="$PROJECT_DIR$/alembic.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/files/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/files/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/files/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/files/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/links/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/links/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/links/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/roles/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrations/versions/194dad7ff530_add_files.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/versions/194dad7ff530_add_files.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -349,7 +343,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769682305901</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="Upload files in ./files dir system">
+      <option name="closed" value="true" />
+      <created>1769704129203</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1769704129203</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -384,6 +386,7 @@
     <MESSAGE value="RoleHistoryResponse id add" />
     <MESSAGE value="minor fixes rests and PATCH users pydantic validate" />
     <MESSAGE value="patch fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="patch fix" />
+    <MESSAGE value="Upload files in ./files dir system" />
+    <option name="LAST_COMMIT_MESSAGE" value="Upload files in ./files dir system" />
   </component>
 </project>

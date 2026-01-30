@@ -46,12 +46,15 @@ from app.levels.routes import router as levels_router
 from app.projects.routes import router as projects_router
 from app.series.routes import router as series_router
 from app.files.routes import router as files_router, CustomStaticFiles
+from app.links.routes import router as links_router
 
 app.include_router(user_router)
 app.include_router(levels_router)
 app.include_router(projects_router)
 app.include_router(series_router)
 app.include_router(files_router)
+app.include_router(links_router)
+
 
 app.add_middleware(
     CORSMiddleware,

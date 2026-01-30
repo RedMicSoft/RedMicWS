@@ -1,8 +1,10 @@
+from fastapi import HTTPException, status
 from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy import select
 from starlette.staticfiles import StaticFiles
 import uuid
+import os
 
 from app.files.models import FileModel
 from app.database import async_session_maker
@@ -44,3 +46,14 @@ class CustomStaticFiles(StaticFiles):
 
         print(f"Успешно, новое имя файла: {file.prev_filename}")
         return response
+
+
+async def file_delete(filename: str):
+    file_to_delete = FILES_DIR / filename
+
+    if not file_to_delete.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден в директории."
+        )
+
+    os.remove(file_to_delete)

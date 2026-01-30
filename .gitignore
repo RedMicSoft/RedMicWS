@@ -212,3 +212,4 @@ app/tests.py
 #media
 .media
 /media/
+/team_files/
