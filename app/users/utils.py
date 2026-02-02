@@ -23,6 +23,7 @@ SECRET_KEY = "RedMicWorkSpaceRMWS"
 ALGORITHM = "HS256"
 
 MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / "media"
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def hash_password(password: str) -> str:

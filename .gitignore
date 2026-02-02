@@ -213,3 +213,5 @@ app/tests.py
 .media
 /media/
 /team_files/
+
+/clean.sql

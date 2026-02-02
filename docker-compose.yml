@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./media:/RedMicWS/media
+      - ./team_files:/RedMicWS/team_files
+    ports:
+      - "8000:8000"
+    container_name: redmicws_api
+    depends_on:
+      - db
+
+  db:
+    image: postgres:18
+    container_name: redmicws_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: redmic_db
+    volumes:
+      # СТРОКА 1: Дамп БД (с хоста в контейнер)
+      - ./clean.sql:/docker-entrypoint-initdb.d/clean.sql
+      # ЧТО ПРОИСХОДИТ:
+      # 1. Файл dump.sql на ХОСТЕ (рядом с docker-compose.yml)
+      # 2. Копируется в контейнер в папку /docker-entrypoint-initdb.d/
+      # 3. PostgreSQL при первом запуске выполнит этот SQL-файл
+      # 4. Работает ТОЛЬКО если БД пустая (при первом запуске)
+
+      # СТРОКА 2: Данные БД (сохраняются на хосте)
+      - postgres_data:/var/lib/postgresql/data
+      # ЧТО ПРОИСХОДИТ:
+      # 1. Docker создаст том postgres_data на ХОСТЕ
+      # 2. Все данные БД будут храниться там
+      # 3. При перезапуске контейнера данные сохранятся
+    ports:
+      - "5432:5432"
+volumes:
+  postgres_data:

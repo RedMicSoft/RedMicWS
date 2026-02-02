@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app.database import Base
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Импорт всех моделей (у тебя уже есть)
 from app.files.models import FileModel
@@ -77,3 +81,9 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+
+db_url = os.getenv("DB_URL")
+
+if db_url:
+    config.set_main_option("sqlalchemy.url", db_url)

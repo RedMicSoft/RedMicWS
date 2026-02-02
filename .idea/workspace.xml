@@ -4,16 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Upload files in ./files dir system">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="links system + DELETE /files router">
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/files/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/files/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/files/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/files/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/links/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/links/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/links/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrations/versions/194dad7ff530_add_files.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/versions/194dad7ff530_add_files.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,6 +22,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="Dockerfile" />
       </list>
     </option>
   </component>
@@ -66,6 +65,7 @@
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
 }</component>
@@ -351,7 +351,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769704129203</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="links system + DELETE /files router">
+      <option name="closed" value="true" />
+      <created>1769772290981</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1769772290981</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -387,6 +395,7 @@
     <MESSAGE value="minor fixes rests and PATCH users pydantic validate" />
     <MESSAGE value="patch fix" />
     <MESSAGE value="Upload files in ./files dir system" />
-    <option name="LAST_COMMIT_MESSAGE" value="Upload files in ./files dir system" />
+    <MESSAGE value="links system + DELETE /files router" />
+    <option name="LAST_COMMIT_MESSAGE" value="links system + DELETE /files router" />
   </component>
 </project>

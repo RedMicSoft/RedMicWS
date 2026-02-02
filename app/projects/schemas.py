@@ -31,9 +31,8 @@ class ProjectCreate(BaseModel):
     )  # проверить описание в сваггере
     image_url: str | None
     created_at: date
-    curator: str
-    participants: list[str]
+    curator: int
     links: list[ProjectLinkCreate]
     status: status_list = Field(
         examples=["подготовка", "в работе", "завершён", "приостановлен", "закрыт"]
-    )
+    )  # default = подготовка
