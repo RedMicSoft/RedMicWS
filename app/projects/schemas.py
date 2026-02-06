@@ -1,5 +1,6 @@
+from fastapi import Form
 from datetime import date
-from typing import Literal
+from typing import Literal, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 from app.users.schemas import UsersResponse
 from app.series.schemas import SeriesResponse
@@ -24,7 +25,9 @@ class ProjectLinkResponse(BaseModel):
 class Participants(BaseModel):
     user_id: int
     nickname: str
-    avatar_url: str
+    avatar_url: str | None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectResponse(BaseModel):
@@ -56,8 +59,28 @@ class ProjectCreate(BaseModel):
         examples=["закадр", "рекаст", "дубляж"], description="тип озвучки"
     )  # проверить описание в сваггере
     created_at: date
-    curator: int
-    links: list[ProjectLinkCreate]
+    curator_id: int
     status: status_list = Field(
-        examples=["подготовка", "в работе", "завершён", "приостановлен", "закрыт"]
+        examples=["подготовка", "в работе", "завершён", "приостановлен", "закрыт"],
+        default="подготовка",
     )  # default = подготовка
+    description: str | None
+
+    @classmethod
+    def as_form(
+        cls,
+        title: Annotated[str, Form(...)],
+        type: Annotated[voice_types, Form(...)],
+        created_at: Annotated[date, Form(...)],
+        curator_id: Annotated[int, Form(...)],
+        description: Annotated[str, Form(...)],
+        status: Annotated[status_list, Form(...)] = "подготовка",
+    ) -> "ProjectCreate":
+        return cls(
+            title=title,
+            type=type,
+            created_at=created_at,
+            curator_id=curator_id,
+            status=status,
+            description=description,
+        )

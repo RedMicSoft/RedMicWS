@@ -1,8 +1,16 @@
-from fastapi import APIRouter, status, Request, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    status,
+    Request,
+    UploadFile,
+    Depends,
+    HTTPException,
+    Query,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
-
+from app.projects.utils import save_project_image
 from app.database import get_db
 from .models import Project as ProjectModel, ProjectLink, ProjectUser, Project
 from app.users.models import User as UserModel
@@ -11,8 +19,6 @@ from app.users.utils import (
     get_max_lvl,
     get_current_user,
     check_curator,
-    check_admin,
-    check_senior_admin,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -69,9 +75,10 @@ async def get_project(
     return project
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_project(
-    project: ProjectCreate,
+    image: UploadFile | None = None,
+    project: ProjectCreate = Depends(ProjectCreate.as_form),
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
@@ -82,6 +89,22 @@ async def create_project(
     type принимает только "закадр", "рекаст", "дубляж"\n
     status принимает только "подготовка", "в работе", "завершён", "приостановлен", "закрыт"\n
     """
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только куратор и выше могут создавать проект.",
+        )
+    new_project = ProjectModel(**project.model_dump())
+
+    if image:
+        image_url = await save_project_image(image)
+        new_project.image_url = image_url
+
+    db.add(new_project)
+    await db.commit()
+    await db.refresh(new_project)
+
+    return new_project
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)

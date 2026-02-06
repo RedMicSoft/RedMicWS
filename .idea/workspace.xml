@@ -4,17 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="docker + .env">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="alembic migr">
+      <change afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/series/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,8 +19,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="Dockerfile" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -370,7 +365,23 @@
       <option name="project" value="LOCAL" />
       <updated>1770037375408</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="GET /projects/, projects/{project_id}/. alembic upgrade required.">
+      <option name="closed" value="true" />
+      <created>1770366045082</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1770366045082</updated>
+    </task>
+    <task id="LOCAL-00028" summary="alembic migr">
+      <option name="closed" value="true" />
+      <created>1770366063425</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1770366063425</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -408,6 +419,8 @@
     <MESSAGE value="Upload files in ./files dir system" />
     <MESSAGE value="links system + DELETE /files router" />
     <MESSAGE value="docker + .env" />
-    <option name="LAST_COMMIT_MESSAGE" value="docker + .env" />
+    <MESSAGE value="GET /projects/, projects/{project_id}/. alembic upgrade required." />
+    <MESSAGE value="alembic migr" />
+    <option name="LAST_COMMIT_MESSAGE" value="alembic migr" />
   </component>
 </project>
