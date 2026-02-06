@@ -1,12 +1,12 @@
 from fastapi import APIRouter, status, Request, Depends, HTTPException, Query
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from .models import Project as ProjectModel, ProjectLink, ProjectUser, Project
 from app.users.models import User as UserModel
-from .schemas import ProjectResponse, ProjectCreate
+from .schemas import ProjectResponse, ProjectCreate, ProjectsResponse
 from app.users.utils import (
     get_max_lvl,
     get_current_user,
@@ -18,57 +18,55 @@ from app.users.utils import (
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-@router.get("/", response_model=list[ProjectResponse])
+@router.get("/", response_model=list[ProjectsResponse])
 async def get_projects(
-    participation: bool = Query(default=False),
+    user_id: int = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
     """
     Возвращает список всех проектов.\n
-    Если participation = True, пользователь получит только те проекты, в которых он участвует.\n
-    Если False, соответственно, все проекты.
+    Если указан user_id, то вернутся проекты в которых участвует пользователь.\n
+    Если null, соответственно, все проекты.
 
     """
-    if not participation:
-        projects = await db.scalars(
-            select(ProjectModel).where(ProjectModel.is_active == True)
-        )
+    stmt = select(ProjectModel)
 
-    else:
-        projects = await db.scalars(
-            select(ProjectModel)
-            .join(ProjectUser, ProjectModel.project_id == ProjectUser.project_id)
-            .where(ProjectUser.user_id == user.user_id, ProjectModel.is_active == True)
-        )
+    if user_id:
+        if not await db.scalar(select(UserModel).where(UserModel.user_id == user_id)):
+            raise HTTPException(status_code=404, detail="User not found")
+        stmt = stmt.join(ProjectUser).where(ProjectUser.user_id == user_id)
+    db_projects = await db.scalars(stmt)
+    projects = db_projects.all()
 
-    res = projects.all()
+    return projects
 
-    if not res:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проектов ещё не существует"
-        )
 
-    result = []
-    for project in res:
-        curator = await db.scalar(
-            select(UserModel).where(
-                UserModel.is_active == True,
-                UserModel.user_id == project.curator,
-            )
+@router.get("/{project_id}", response_model=ProjectResponse)
+async def get_project(
+    project_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    db_project = await db.scalar(
+        select(ProjectModel)
+        .options(
+            selectinload(ProjectModel.links),
+            selectinload(ProjectModel.participants),
+            selectinload(ProjectModel.series_list),
+            selectinload(ProjectModel.curator).options(
+                selectinload(UserModel.contacts), selectinload(UserModel.team_roles)
+            ),
         )
-        response = ProjectResponse(
-            project_id=project.project_id,
-            title=project.title,
-            type=project.type,
-            curator=curator.nickname,
-            image_url=project.image_url,
-            created_at=project.created_at,
-            is_active=project.is_active,
-            status=project.status,
-        )
-        result.append(response)
-    return result
+        .where(ProjectModel.project_id == project_id)
+    )
+
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Проект не найден.")
+
+    project = ProjectResponse.model_validate(db_project)
+
+    return project
 
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -84,74 +82,6 @@ async def create_project(
     type принимает только "закадр", "рекаст", "дубляж"\n
     status принимает только "подготовка", "в работе", "завершён", "приостановлен", "закрыт"\n
     """
-    participants = []
-    if not await get_max_lvl(db, user) >= 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только кураторы и администраторы могут создавать проекты.",
-        )
-
-    for participant in project.participants:
-        db_participant = await db.scalar(
-            select(UserModel).where(
-                UserModel.nickname == participant, UserModel.is_active == True
-            )
-        )
-        if not db_participant:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Пользователь с ником {participant} не найден.",
-            )
-        participants.append(db_participant)
-
-    curator = await db.scalar(
-        select(UserModel).where(
-            UserModel.is_active == True, UserModel.nickname == project.curator
-        )
-    )
-    if not curator or not check_curator(db, curator):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Куратор не существует"
-        )
-    new_project = ProjectModel(
-        title=project.title,
-        type=project.type,
-        curator=curator.user_id,
-        image_url=project.image_url,
-        created_at=project.created_at,
-        status=project.status,
-    )
-
-    db.add(new_project)
-    await db.flush()
-    await db.refresh(new_project)
-
-    for participant in participants:
-        new_db_participant = ProjectUser(
-            user_id=participant.user_id, project_id=new_project.project_id
-        )
-
-        db.add(new_db_participant)
-
-    for link in project.links:
-        new_db_link = ProjectLink(
-            project_id=new_project.project_id, title=link.title, url=link.url
-        )
-
-        db.add(new_db_link)
-
-    await db.commit()
-    response = ProjectResponse(
-        project_id=new_project.project_id,
-        title=new_project.title,
-        type=new_project.type,
-        curator=curator.nickname,
-        image_url=new_project.image_url,
-        created_at=new_project.created_at,
-        is_active=new_project.is_active,
-        status=new_project.status,
-    )
-    return response
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)

@@ -12,7 +12,7 @@ class Project(Base):
     project_id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(unique=True)
     type: Mapped[str] = mapped_column()  # off-screen/recast/dub
-    curator: Mapped[int] = mapped_column(
+    curator_id: Mapped[int] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
@@ -21,9 +21,26 @@ class Project(Base):
     created_at: Mapped[date] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
     status: Mapped[str] = mapped_column()
+    description: Mapped[str | None] = mapped_column(default=None)
 
     links: Mapped[list["ProjectLink"]] = relationship(
         "ProjectLink",
+        back_populates="project",
+    )
+
+    participants: Mapped[list["User"]] = relationship(
+        "User",
+        back_populates="projects",
+        secondary="projects_users",
+    )
+
+    curator: Mapped["User"] = relationship(
+        "User",
+        back_populates="curator_projects",
+    )
+
+    series_list: Mapped[list["Series"]] = relationship(
+        "Series",
         back_populates="project",
     )
 

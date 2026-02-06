@@ -42,11 +42,14 @@ class User(Base):
         back_populates="user",
     )
 
-    @property
-    def is_rest(self):
-        if self.rest_start:
-            return relativedelta(date.today(), self.rest_end).days < 0
-        return False
+    projects: Mapped[list["Project"]] = relationship(
+        "Project", back_populates="participants", secondary="projects_users"
+    )
+
+    curator_projects: Mapped[list["Project"]] = relationship(
+        "Project",
+        back_populates="curator",
+    )
 
 
 class Contacts(Base):

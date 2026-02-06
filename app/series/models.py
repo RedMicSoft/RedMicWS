@@ -52,3 +52,5 @@ class Series(Base):
         back_populates="series",
         secondary="role_series",
     )
+
+    project: Mapped["Project"] = relationship("Project", back_populates="series_list")

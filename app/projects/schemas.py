@@ -1,22 +1,11 @@
 from datetime import date
 from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict
+from app.users.schemas import UsersResponse
+from app.series.schemas import SeriesResponse
 
 voice_types = Literal["закадр", "рекаст", "дубляж"]
 status_list = Literal["подготовка", "в работе", "завершён", "приостановлен", "закрыт"]
-
-
-class ProjectResponse(BaseModel):
-    project_id: int
-    title: str
-    type: str
-    curator: str
-    image_url: str
-    created_at: date
-    is_active: bool
-    status: str
-
-    ConfigDict(from_attributes=True)
 
 
 class ProjectLinkCreate(BaseModel):
@@ -24,12 +13,48 @@ class ProjectLinkCreate(BaseModel):
     url: str
 
 
+class ProjectLinkResponse(BaseModel):
+    id: int
+    title: str
+    url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Participants(BaseModel):
+    user_id: int
+    nickname: str
+    avatar_url: str
+
+
+class ProjectResponse(BaseModel):
+    title: str
+    created_at: date
+    curator: UsersResponse
+    type: str
+    status: str
+    series_list: list[SeriesResponse] | None
+    links: list[ProjectLinkResponse] | None
+    participants: list[Participants] | None
+    description: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectsResponse(BaseModel):
+    project_id: int
+    title: str
+    status: str
+    image_url: str
+
+    ConfigDict(from_attributes=True)
+
+
 class ProjectCreate(BaseModel):
     title: str
     type: voice_types = Field(
         examples=["закадр", "рекаст", "дубляж"], description="тип озвучки"
     )  # проверить описание в сваггере
-    image_url: str | None
     created_at: date
     curator: int
     links: list[ProjectLinkCreate]

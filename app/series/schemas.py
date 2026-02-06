@@ -22,5 +22,5 @@ class SeriesCreate(BaseModel):
 
 
 class SeriesResponse(BaseModel):
-    project_id: int
+    id: int
     title: str

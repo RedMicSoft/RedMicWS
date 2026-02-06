@@ -19,8 +19,6 @@ from .utils import (
     create_access_token,
     get_current_user,
     get_max_lvl,
-    check_admin,
-    check_senior_admin,
     save_avatar,
     save_demo,
     get_id_deleted_user,

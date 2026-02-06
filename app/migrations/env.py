@@ -11,7 +11,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
+db_url = os.getenv("DB_URL")
 # Импорт всех моделей (у тебя уже есть)
 from app.files.models import FileModel
 from app.links.models import Link
@@ -30,7 +30,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url", db_url)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -81,9 +81,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
-
-db_url = os.getenv("DB_URL")
-
-if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
