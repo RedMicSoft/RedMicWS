@@ -22,12 +22,16 @@ class ProjectLinkResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class Participants(BaseModel):
+class ParticipantsResponse(BaseModel):
     user_id: int
     nickname: str
     avatar_url: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ParticipantsUpdate(BaseModel):
+    user_id: int
 
 
 class ProjectResponse(BaseModel):
@@ -38,7 +42,7 @@ class ProjectResponse(BaseModel):
     status: str
     series_list: list[SeriesResponse] | None
     links: list[ProjectLinkResponse] | None
-    participants: list[Participants] | None
+    participants: list[ParticipantsResponse] | None
     description: str | None
 
     model_config = ConfigDict(from_attributes=True)
