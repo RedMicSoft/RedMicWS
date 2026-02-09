@@ -207,6 +207,41 @@ async def update_project_cover(
     return upd_project
 
 
+@router.post("/{project_id}/participant")
+async def add_project_participant(
+    project_id: int,
+    user_id: int = Body(...),
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут добавлять участников.",
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    new_participant = await db.get(UserModel, user_id)
+    if not new_participant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такого пользователя не существует.",
+        )
+
+    new_participation = ProjectUser(user_id=user_id, project_id=project_id)
+    db.add(new_participation)
+    await db.commit()
+    await db.refresh(new_participation)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
 @router.delete("/{project_id}", status_code=status.HTTP_200_OK)
 async def delete_project(
     project_id: int,
