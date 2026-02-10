@@ -15,7 +15,13 @@ from app.projects.utils import upd_project_cover, get_db_project
 from app.database import get_db
 from .models import Project as ProjectModel, ProjectLink, ProjectUser, Project
 from app.users.models import User as UserModel
-from .schemas import ProjectResponse, ProjectCreate, ProjectsResponse, status_list
+from .schemas import (
+    ProjectResponse,
+    ProjectCreate,
+    ProjectsResponse,
+    status_list,
+    ProjectLinkCreate,
+)
 from app.users.utils import (
     get_max_lvl,
     get_current_user,
@@ -207,10 +213,10 @@ async def update_project_cover(
     return upd_project
 
 
-@router.post("/{project_id}/participant")
+@router.post("/{project_id}/participants")
 async def add_project_participant(
     project_id: int,
-    user_id: int = Body(...),
+    participant_id: int = Body(...),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -226,14 +232,14 @@ async def add_project_participant(
             status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
-    new_participant = await db.get(UserModel, user_id)
+    new_participant = await db.get(UserModel, participant_id)
     if not new_participant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Такого пользователя не существует.",
         )
 
-    new_participation = ProjectUser(user_id=user_id, project_id=project_id)
+    new_participation = ProjectUser(user_id=participant_id, project_id=project_id)
     db.add(new_participation)
     await db.commit()
     await db.refresh(new_participation)
@@ -241,6 +247,127 @@ async def add_project_participant(
     upd_project = await get_db_project(project_id, db)
     return upd_project
 
+
+@router.delete("/{project_id}/participants/{participant_id}")
+async def delete_project_participant(
+    project_id: int,
+    participant_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут удалить участника.",
+        )
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+    participation = await db.scalar(
+        select(ProjectUser).where(
+            ProjectUser.user_id == participant_id, ProjectUser.project_id == project_id
+        )
+    )
+    if not participation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Участник не найден."
+        )
+    await db.delete(participation)
+    await db.commit()
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
+@router.post("/{project_id}/links")
+async def add_project_link(
+    project_id: int,
+    link: ProjectLinkCreate,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут добавлять ссылки",
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+    db_link = ProjectLink(**link.model_dump(), project_id = project_id)
+
+    db.add(db_link)
+    await db.commit()
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
+@router.patch("/{project_id}/description")
+async def update_project_description(
+    project_id: int,
+    description: str,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Только админ."
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    db_project.description = description
+    await db.commit()
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
+@router.delete("/{project_id}/links/{link_id}")
+async def delete_project_link(
+    project_id: int,
+    link_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только админы могут удалять ссылки.",
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    db_link = await db.get(ProjectLink, link_id)
+    if not db_link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail = "Ссылка не найдена."
+        )
+
+    await db.delete(db_link)
+    await db.commit()
+    await db.refresh(db_link)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
 
 @router.delete("/{project_id}", status_code=status.HTTP_200_OK)
 async def delete_project(

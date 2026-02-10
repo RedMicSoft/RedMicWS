@@ -33,6 +33,8 @@ from app.roles.models import RoleHistory, Role
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+DELETED_USER_ID = -1
+
 
 @router.get("/", response_model=list[UsersResponse])
 async def get_users(
@@ -54,7 +56,7 @@ async def get_users(
         )
 
     else:
-        db_users = select(UserModel)
+        db_users = select(UserModel).where(UserModel.user_id != DELETED_USER_ID)
 
     db_users = db_users.options(
         selectinload(UserModel.contacts),
