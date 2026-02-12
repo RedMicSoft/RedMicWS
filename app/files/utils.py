@@ -5,6 +5,7 @@ from sqlalchemy import select
 from starlette.staticfiles import StaticFiles
 import uuid
 import os
+from urllib.parse import quote
 
 from app.files.models import FileModel
 from app.database import async_session_maker
@@ -40,8 +41,9 @@ class CustomStaticFiles(StaticFiles):
                 select(FileModel).where(FileModel.file_url == full_db_path)
             )
         if hasattr(response, "headers"):
+            encoded_filename = quote(file.prev_filename)
             response.headers["Content-Disposition"] = (
-                f'attachment; filename="{file.prev_filename}"'
+                f"attachment; filename*=utf-8''{encoded_filename}"
             )
 
         print(f"Успешно, новое имя файла: {file.prev_filename}")

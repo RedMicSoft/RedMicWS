@@ -300,7 +300,7 @@ async def add_project_link(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
-    db_link = ProjectLink(**link.model_dump(), project_id = project_id)
+    db_link = ProjectLink(**link.model_dump(), project_id=project_id)
 
     db.add(db_link)
     await db.commit()
@@ -358,8 +358,7 @@ async def delete_project_link(
     db_link = await db.get(ProjectLink, link_id)
     if not db_link:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail = "Ссылка не найдена."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка не найдена."
         )
 
     await db.delete(db_link)
@@ -368,6 +367,7 @@ async def delete_project_link(
 
     upd_project = await get_db_project(project_id, db)
     return upd_project
+
 
 @router.delete("/{project_id}", status_code=status.HTTP_200_OK)
 async def delete_project(
