@@ -34,6 +34,31 @@ class ParticipantsUpdate(BaseModel):
     user_id: int
 
 
+class RoleResponse(BaseModel):
+    role_id: int
+    role_title: str
+    user_nickname: str
+    image_url: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoleCreate(BaseModel):
+    role_title: str
+    user_nickname: str
+
+    @classmethod
+    def as_form(
+        cls,
+        role_title: Annotated[str, Form(...)],
+        user_nickname: Annotated[str, Form(...)],
+    ) -> "RoleCreate":
+        return cls(
+            role_title=role_title,
+            user_nickname=user_nickname,
+        )
+
+
 class ProjectResponse(BaseModel):
     title: str
     created_at: date
@@ -43,6 +68,7 @@ class ProjectResponse(BaseModel):
     series_list: list[SeriesResponse] | None
     links: list[ProjectLinkResponse] | None
     participants: list[ParticipantsResponse] | None
+    roles: list[RoleResponse] | None
     description: str | None
 
     model_config = ConfigDict(from_attributes=True)

@@ -43,6 +43,11 @@ class Project(Base):
         back_populates="project",
     )
 
+    roles: Mapped[list["ProjectRoleHistory"]] = relationship(
+        "ProjectRoleHistory",
+        back_populates="project",
+    )
+
 
 class ProjectLink(Base):
     __tablename__ = "project_links"
@@ -70,4 +75,19 @@ class ProjectUser(Base):
     )
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.project_id"), primary_key=True
+    )
+
+
+class ProjectRoleHistory(Base):
+    __tablename__ = "project_role_history"
+
+    role_id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.project_id"))
+    role_title: Mapped[str] = mapped_column()
+    user_nickname: Mapped[str] = mapped_column()
+    image_url: Mapped[str] = mapped_column()
+
+    project: Mapped["Project"] = relationship(
+        "Project",
+        back_populates="roles",
     )

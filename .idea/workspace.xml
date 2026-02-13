@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="POST /projects/{project_id}/participant">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="CustomStaticFiles FIX">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -403,7 +405,23 @@
       <option name="project" value="LOCAL" />
       <updated>1770667065161</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="DELETE projects/{project_id}/participants/{participant_id}&#10;POST projects/{project_id}/links&#10;PATCH projects/{project_id}/description&#10;DELETE projects/{project_id}/links/{link_id}&#10;GET /users/ fix">
+      <option name="closed" value="true" />
+      <created>1770723164781</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1770723164781</updated>
+    </task>
+    <task id="LOCAL-00033" summary="CustomStaticFiles FIX">
+      <option name="closed" value="true" />
+      <created>1770903962767</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1770903962767</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -418,8 +436,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add CRON triggers for daily rest updating" />
-    <MESSAGE value="remove users_series table" />
     <MESSAGE value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
     <MESSAGE value="new deleted user id" />
     <MESSAGE value="GET /users fix" />
@@ -443,6 +459,8 @@
     <MESSAGE value="POST /projects/ + alembic migr" />
     <MESSAGE value="PATCH /projects/{project_id}/title&#10;PUT /projects/{project_id}/status&#10;PUT /projects/{project_id}/curator&#10;PUT /projects/{project_id}/cover" />
     <MESSAGE value="POST /projects/{project_id}/participant" />
-    <option name="LAST_COMMIT_MESSAGE" value="POST /projects/{project_id}/participant" />
+    <MESSAGE value="DELETE projects/{project_id}/participants/{participant_id}&#10;POST projects/{project_id}/links&#10;PATCH projects/{project_id}/description&#10;DELETE projects/{project_id}/links/{link_id}&#10;GET /users/ fix" />
+    <MESSAGE value="CustomStaticFiles FIX" />
+    <option name="LAST_COMMIT_MESSAGE" value="CustomStaticFiles FIX" />
   </component>
 </project>

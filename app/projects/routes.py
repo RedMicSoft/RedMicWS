@@ -11,9 +11,20 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
-from app.projects.utils import upd_project_cover, get_db_project
+from app.projects.utils import (
+    upd_project_cover,
+    get_db_project,
+    save_role_image,
+    delete_role_image,
+)
 from app.database import get_db
-from .models import Project as ProjectModel, ProjectLink, ProjectUser, Project
+from .models import (
+    Project as ProjectModel,
+    ProjectLink,
+    ProjectUser,
+    Project,
+    ProjectRoleHistory,
+)
 from app.users.models import User as UserModel
 from .schemas import (
     ProjectResponse,
@@ -21,6 +32,7 @@ from .schemas import (
     ProjectsResponse,
     status_list,
     ProjectLinkCreate,
+    RoleCreate,
 )
 from app.users.utils import (
     get_max_lvl,
@@ -61,7 +73,7 @@ async def get_project(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = get_db_project(project_id, db)
+    project = await get_db_project(project_id, db)
 
     return project
 
@@ -417,3 +429,72 @@ async def delete_project(
     await db.commit()
 
     return "Проект был успешно удалён."
+
+
+@router.post("/{project_id}/roles")
+async def add_role(
+    project_id: int,
+    image: UploadFile,
+    role: RoleCreate = Depends(RoleCreate.as_form),
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    if image:
+        image_url = await save_role_image(image)
+
+    new_db_role = ProjectRoleHistory(
+        **role.model_dump(), image_url=image_url, project_id=project_id
+    )
+    db.add(new_db_role)
+    await db.commit()
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
+@router.delete("/{project_id}/roles/{role_id}")
+async def remove_role(
+    project_id: int,
+    role_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await get_max_lvl(db, user) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
+        )
+
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    db_role = await db.get(ProjectRoleHistory, role_id)
+    if not db_role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    if db_role.image_url:
+        delete_role_image(db_role.image_url)
+
+    await db.delete(db_role)
+    await db.commit()
+
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+
+    return upd_project
