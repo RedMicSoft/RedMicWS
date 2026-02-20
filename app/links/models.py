@@ -9,3 +9,4 @@ class Link(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     link_title: Mapped[str] = mapped_column()
     link_url: Mapped[str] = mapped_column(unique=True)
+    category: Mapped[str] = mapped_column()

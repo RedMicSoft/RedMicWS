@@ -4,17 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="миграция для последнего коммита">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/links/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/schemas.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/profiles/utils.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/links/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -443,7 +435,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771015974699</updated>
     </task>
-    <option name="localTasksCounter" value="36" />
+    <task id="LOCAL-00036" summary="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта.">
+      <option name="closed" value="true" />
+      <created>1771600878666</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1771600878666</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -458,7 +458,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="GET /users fix" />
     <MESSAGE value="fixed rest + jwt" />
     <MESSAGE value="fixes" />
     <MESSAGE value="avatar names uuid generation" />
@@ -483,6 +482,7 @@
     <MESSAGE value="CustomStaticFiles FIX" />
     <MESSAGE value="Добавлена таблица project_role_history&#10;Добавлена система добавления и удаления ролей в проект.&#10;Обновлена схема ответа проекта, которая теперь включает в себя список ролей." />
     <MESSAGE value="миграция для последнего коммита" />
-    <option name="LAST_COMMIT_MESSAGE" value="миграция для последнего коммита" />
+    <MESSAGE value="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта." />
+    <option name="LAST_COMMIT_MESSAGE" value="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта." />
   </component>
 </project>

@@ -19,7 +19,8 @@ ALLOWED_IMG_EXT = (".png", ".jpg", ".jpeg", ".webp")
 
 async def delete_project_cover(db_path: str) -> None:
     image_path = PROJECT_IMAGES_DIR / db_path.split("/")[-1]
-    image_path.unlink()
+    if image_path.exists():
+        image_path.unlink()
 
 
 async def upd_project_cover(image: UploadFile, exist_image: str | None):
