@@ -16,6 +16,7 @@ from app.projects.utils import (
     get_db_project,
     save_role_image,
     delete_role_image,
+    delete_project_cover,
 )
 from app.database import get_db
 from .models import (
@@ -387,48 +388,24 @@ async def delete_project(
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
-    """
-    Эндпоинт для мягкого удаления проекта.
-    Доступен только 2+ лвл.
-    """
-    if not await get_max_lvl(db, user) >= 2:
+    if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только куратор и выше может удалить проект",
+            detail="Только админ и выше может удалить проект",
         )
 
-    project = await db.scalar(
-        select(ProjectModel).where(
-            ProjectModel.project_id == project_id, ProjectModel.is_active == True
-        )
-    )
-    if not project:
+    db_project = await db.get(ProjectModel, project_id)
+    if not db_project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
+    if db_project.image_url:
+        await delete_project_cover(db_project.image_url)
 
-    db_links = await db.scalars(
-        select(ProjectLink).where(
-            ProjectLink.project_id == project_id, ProjectLink.is_active == True
-        )
-    )
-    # Мягкое удаление ссылок
-    links = db_links.all()
-    for link in links:
-        link.is_active = False
-    # удаление связей с пользователями
-    db_participants = await db.scalars(
-        select(ProjectUser).where(ProjectUser.project_id == project_id)
-    )
-    participants = db_participants.all()
-    if participants:
-        for participant in participants:
-            await db.delete(participant)
-
-    project.is_active = False
+    await db.delete(db_project)
     await db.commit()
 
-    return "Проект был успешно удалён."
+    return "Проект успешно удалён."
 
 
 @router.post("/{project_id}/roles")

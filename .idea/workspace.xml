@@ -4,8 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="CustomStaticFiles FIX">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="миграция для последнего коммита">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/links/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/routes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/schemas.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/profiles/utils.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
@@ -421,7 +427,23 @@
       <option name="project" value="LOCAL" />
       <updated>1770903962767</updated>
     </task>
-    <option name="localTasksCounter" value="34" />
+    <task id="LOCAL-00034" summary="Добавлена таблица project_role_history&#10;Добавлена система добавления и удаления ролей в проект.&#10;Обновлена схема ответа проекта, которая теперь включает в себя список ролей.">
+      <option name="closed" value="true" />
+      <created>1771015527458</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1771015527458</updated>
+    </task>
+    <task id="LOCAL-00035" summary="миграция для последнего коммита">
+      <option name="closed" value="true" />
+      <created>1771015974699</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1771015974699</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -436,8 +458,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Minor fixes have been made to the users/routes.py file. Added a system for creating and deleting rests. Added a system for automatically updating the rest state at 0:00 daily. Added a system for removing a user's role" />
-    <MESSAGE value="new deleted user id" />
     <MESSAGE value="GET /users fix" />
     <MESSAGE value="fixed rest + jwt" />
     <MESSAGE value="fixes" />
@@ -461,6 +481,8 @@
     <MESSAGE value="POST /projects/{project_id}/participant" />
     <MESSAGE value="DELETE projects/{project_id}/participants/{participant_id}&#10;POST projects/{project_id}/links&#10;PATCH projects/{project_id}/description&#10;DELETE projects/{project_id}/links/{link_id}&#10;GET /users/ fix" />
     <MESSAGE value="CustomStaticFiles FIX" />
-    <option name="LAST_COMMIT_MESSAGE" value="CustomStaticFiles FIX" />
+    <MESSAGE value="Добавлена таблица project_role_history&#10;Добавлена система добавления и удаления ролей в проект.&#10;Обновлена схема ответа проекта, которая теперь включает в себя список ролей." />
+    <MESSAGE value="миграция для последнего коммита" />
+    <option name="LAST_COMMIT_MESSAGE" value="миграция для последнего коммита" />
   </component>
 </project>

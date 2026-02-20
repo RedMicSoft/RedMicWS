@@ -69,7 +69,7 @@ async def delete_link(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if await get_max_lvl(link_id) < 3:
+    if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только админы могут удалять ссылки.",

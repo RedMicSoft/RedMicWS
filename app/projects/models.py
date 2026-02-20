@@ -25,12 +25,16 @@ class Project(Base):
     links: Mapped[list["ProjectLink"]] = relationship(
         "ProjectLink",
         back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     participants: Mapped[list["User"]] = relationship(
         "User",
         back_populates="projects",
         secondary="projects_users",
+        cascade="all",
+        passive_deletes=True,
     )
 
     curator: Mapped["User"] = relationship(
@@ -41,11 +45,13 @@ class Project(Base):
     series_list: Mapped[list["Series"]] = relationship(
         "Series",
         back_populates="project",
+        cascade="all, delete-orphan",
     )
 
     roles: Mapped[list["ProjectRoleHistory"]] = relationship(
         "ProjectRoleHistory",
         back_populates="project",
+        cascade="all, delete-orphan",
     )
 
 
@@ -53,7 +59,9 @@ class ProjectLink(Base):
     __tablename__ = "project_links"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.project_id"))
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.project_id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column()
     url: Mapped[str] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
@@ -74,7 +82,7 @@ class ProjectUser(Base):
         server_default=str(DELETED_USER_ID),
     )
     project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.project_id"), primary_key=True
+        ForeignKey("projects.project_id", ondelete="CASCADE"), primary_key=True
     )
 
 
@@ -82,7 +90,9 @@ class ProjectRoleHistory(Base):
     __tablename__ = "project_role_history"
 
     role_id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.project_id"))
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.project_id", ondelete="CASCADE")
+    )
     role_title: Mapped[str] = mapped_column()
     user_nickname: Mapped[str] = mapped_column()
     image_url: Mapped[str] = mapped_column()

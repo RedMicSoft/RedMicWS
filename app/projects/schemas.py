@@ -69,6 +69,7 @@ class ProjectResponse(BaseModel):
     links: list[ProjectLinkResponse] | None
     participants: list[ParticipantsResponse] | None
     roles: list[RoleResponse] | None
+    image_url: str | None
     description: str | None
 
     model_config = ConfigDict(from_attributes=True)
@@ -78,7 +79,7 @@ class ProjectsResponse(BaseModel):
     project_id: int
     title: str
     status: str
-    image_url: str
+    image_url: str | None
 
     ConfigDict(from_attributes=True)
 
