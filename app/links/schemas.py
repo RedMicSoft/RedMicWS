@@ -5,6 +5,7 @@ class LinkResponse(BaseModel):
     id: int
     link_title: str
     link_url: str
+    category: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -12,3 +13,4 @@ class LinkResponse(BaseModel):
 class LinkCreate(BaseModel):
     link_title: str
     link_url: str
+    category: str
