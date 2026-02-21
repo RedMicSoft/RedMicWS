@@ -215,3 +215,6 @@ app/tests.py
 /team_files/
 
 /clean.sql
+/media/avatars/
+/media/srt/
+

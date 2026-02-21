@@ -110,7 +110,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-async def save_demo(demo: UploadFile) -> str:
+async def update_demo(demo: UploadFile, exist_path: str | None = None) -> str:
     if not demo.filename.endswith(".mp4"):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="Демо должно быть в формате .mp4"
@@ -118,15 +118,20 @@ async def save_demo(demo: UploadFile) -> str:
 
     directory = MEDIA_DIR / "demo"
     directory.mkdir(parents=True, exist_ok=True)
+    if exist_path:
+        exist_demo = directory / exist_path.split("/")[-1]
+        if exist_demo.exists():
+            exist_demo.unlink()
 
     content = await demo.read()
-    file_path = MEDIA_ROOT / "demo" / demo.filename
+    filename = f"{uuid.uuid4()}.mp4"
+    file_path = MEDIA_ROOT / "demo" / filename
     file_path.write_bytes(content)
 
-    return f"/media/demo/{demo.filename}"
+    return f"/media/demo/{filename}"
 
 
-async def save_avatar(avatar: UploadFile) -> str:
+async def update_avatar(avatar: UploadFile, exist_path: str | None = None) -> str:
     if not avatar.filename.endswith((".webp", ".png", ".jpg", ".jpeg")):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="Неверный формат аватарки"
@@ -134,6 +139,10 @@ async def save_avatar(avatar: UploadFile) -> str:
 
     directory = MEDIA_DIR / "avatars"
     directory.mkdir(parents=True, exist_ok=True)
+    if exist_path:
+        exist_avatar = directory / exist_path.split("/")[-1]
+        if exist_avatar.exists():
+            exist_avatar.unlink()
 
     content = await avatar.read()
     filename = f"{uuid.uuid4()}{avatar.filename[avatar.filename.rfind("."):]}"

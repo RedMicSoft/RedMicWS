@@ -63,7 +63,7 @@ async def get_db_project(project_id: int, db: AsyncSession):
     return project
 
 
-async def save_role_image(image: UploadFile):
+async def update_role_image(image: UploadFile, exist_path: str | None = None) -> str:
     if not image.filename.endswith(ALLOWED_IMG_EXT):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Недопустимый формат."
@@ -71,6 +71,11 @@ async def save_role_image(image: UploadFile):
 
     role_images_dir = MEDIA_DIR / "project_roles"
     role_images_dir.mkdir(parents=True, exist_ok=True)
+
+    if exist_path:
+        exist_role_image = role_images_dir / exist_path.split("/")[-1]
+        if exist_role_image.exists():
+            exist_role_image.unlink()
 
     content = await image.read()
     filename = f"{uuid.uuid4()}.{image.filename.split('.')[-1]}"

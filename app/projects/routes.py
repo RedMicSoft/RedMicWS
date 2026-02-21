@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.projects.utils import (
     upd_project_cover,
     get_db_project,
-    save_role_image,
+    update_role_image,
     delete_role_image,
     delete_project_cover,
 )
@@ -428,7 +428,7 @@ async def add_role(
         )
 
     if image:
-        image_url = await save_role_image(image)
+        image_url = await update_role_image(image)
 
     new_db_role = ProjectRoleHistory(
         **role.model_dump(), image_url=image_url, project_id=project_id

@@ -19,8 +19,8 @@ from .utils import (
     create_access_token,
     get_current_user,
     get_max_lvl,
-    save_avatar,
-    save_demo,
+    update_avatar,
+    update_demo,
     get_id_deleted_user,
     save_role_image,
 )
@@ -361,7 +361,7 @@ async def update_user_avatar(
         )
 
     user = await db.get(UserModel, user_id)
-    user.avatar_url = await save_avatar(avatar)
+    user.avatar_url = await update_avatar(avatar, user.avatar_url)
 
     await db.commit()
     await db.refresh(user)
@@ -383,7 +383,7 @@ async def update_user_demo(
         )
 
     user = await db.get(UserModel, user_id)
-    user.demo_url = await save_demo(demo)
+    user.demo_url = await update_demo(demo, user.demo_url)
 
     await db.commit()
     await db.refresh(user)
