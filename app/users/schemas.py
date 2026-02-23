@@ -26,7 +26,7 @@ class UserCreate(BaseModel):
 
     nickname: str
     password: str
-    join_date: date = Field(le=date.today())
+    join_date: date = Field()
     birth_date: date | None = Field(le=date.today())
     description: str | None
     contacts: list[ContactCreate]

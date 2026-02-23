@@ -54,3 +54,44 @@ class Series(Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="series_list")
+
+    materials: Mapped[list["Material"]] = relationship(
+        "Material",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
+    links: Mapped[list["Link"]] = relationship(
+        "Link",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
+    roles: Mapped[list["Role"]] = relationship(
+        "Role",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
+
+class Materials(Base):
+    __tablename__ = "materials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    series_id: Mapped[int] = mapped_column(ForeignKey("series.id"))
+    material_title: Mapped[str] = mapped_column()
+    material_prev_title: Mapped[str] = mapped_column()
+    material_link: Mapped[str] = mapped_column()
+
+    series: Mapped["Series"] = relationship("Series", back_populates="materials")
+
+
+class SeriesLinks(Base):
+    __tablename__ = "series_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    series_id: Mapped[int] = mapped_column(ForeignKey("series.id"))
+    link_title: Mapped[str] = mapped_column()
+    link_url: Mapped[str] = mapped_column()
+
+    series: Mapped["Series"] = relationship("Series", back_populates="links")

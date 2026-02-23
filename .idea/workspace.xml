@@ -4,10 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта.">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо.">
+      <change beforePath="$PROJECT_DIR$/.idea/RedMicWS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/RedMicWS.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/links/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/links/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/demo/123.mp4" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/demo/Absolute in doubt.mp4" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/demo/демочка.mp4" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -443,7 +449,39 @@
       <option name="project" value="LOCAL" />
       <updated>1771600878666</updated>
     </task>
-    <option name="localTasksCounter" value="37" />
+    <task id="LOCAL-00037" summary="Доп. проверка на удаление обложки проекта">
+      <option name="closed" value="true" />
+      <created>1771601403476</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1771601403476</updated>
+    </task>
+    <task id="LOCAL-00038" summary="Добавление категории в links">
+      <option name="closed" value="true" />
+      <created>1771685497993</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1771685497993</updated>
+    </task>
+    <task id="LOCAL-00039" summary="Добавлен парсер для использования в сериях">
+      <option name="closed" value="true" />
+      <created>1771687341858</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1771687341858</updated>
+    </task>
+    <task id="LOCAL-00040" summary="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо.">
+      <option name="closed" value="true" />
+      <created>1771687391449</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1771687391449</updated>
+    </task>
+    <option name="localTasksCounter" value="41" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -458,10 +496,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fixed rest + jwt" />
-    <MESSAGE value="fixes" />
-    <MESSAGE value="avatar names uuid generation" />
-    <MESSAGE value="rest fix" />
     <MESSAGE value="rest fix))))" />
     <MESSAGE value="RoleHistory post\delete" />
     <MESSAGE value="check n upd rest mini fix" />
@@ -483,6 +517,10 @@
     <MESSAGE value="Добавлена таблица project_role_history&#10;Добавлена система добавления и удаления ролей в проект.&#10;Обновлена схема ответа проекта, которая теперь включает в себя список ролей." />
     <MESSAGE value="миграция для последнего коммита" />
     <MESSAGE value="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта." />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавление image_url в ответ GET /projects/{project_id}/&#10;Добавлено каскадное удаление проекта." />
+    <MESSAGE value="Доп. проверка на удаление обложки проекта" />
+    <MESSAGE value="Добавление категории в links" />
+    <MESSAGE value="Добавлен парсер для использования в сериях" />
+    <MESSAGE value="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо." />
+    <option name="LAST_COMMIT_MESSAGE" value="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо." />
   </component>
 </project>

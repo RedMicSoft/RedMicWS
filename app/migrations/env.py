@@ -15,7 +15,7 @@ db_url = os.getenv("DB_URL")
 # Импорт всех моделей (у тебя уже есть)
 from app.files.models import FileModel
 from app.links.models import Link
-from app.roles.models import Role, RoleSeries, RoleHistory
+from app.roles.models import Role, RoleHistory
 from app.projects.models import Project, ProjectLink, ProjectUser
 from app.series.models import Series
 from app.users.models import User, Contacts
