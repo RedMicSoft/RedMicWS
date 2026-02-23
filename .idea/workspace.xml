@@ -4,16 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо.">
-      <change beforePath="$PROJECT_DIR$/.idea/RedMicWS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/RedMicWS.iml" afterDir="false" />
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавление новых таблиц для реализации логики серий.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrations/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrations/env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/demo/123.mp4" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/demo/Absolute in doubt.mp4" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/demo/демочка.mp4" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/avatars/267f36df-b2be-40b6-a2e0-26bce479d736.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/avatars/5323539890005807223.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/avatars/TestAvatar.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/avatars/ldoe99k.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/srt/huy 2.srt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/srt/huy.srt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -481,7 +486,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771687391449</updated>
     </task>
-    <option name="localTasksCounter" value="41" />
+    <task id="LOCAL-00041" summary="Добавление новых таблиц для реализации логики серий.">
+      <option name="closed" value="true" />
+      <created>1771873756042</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1771873756042</updated>
+    </task>
+    <option name="localTasksCounter" value="42" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -496,7 +509,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="rest fix))))" />
     <MESSAGE value="RoleHistory post\delete" />
     <MESSAGE value="check n upd rest mini fix" />
     <MESSAGE value="role history empty image fix" />
@@ -521,6 +533,7 @@
     <MESSAGE value="Добавление категории в links" />
     <MESSAGE value="Добавлен парсер для использования в сериях" />
     <MESSAGE value="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо." />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо." />
+    <MESSAGE value="Добавление новых таблиц для реализации логики серий." />
+    <option name="LAST_COMMIT_MESSAGE" value="Добавление новых таблиц для реализации логики серий." />
   </component>
 </project>

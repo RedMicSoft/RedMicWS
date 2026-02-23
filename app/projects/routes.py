@@ -17,6 +17,7 @@ from app.projects.utils import (
     update_role_image,
     delete_role_image,
     delete_project_cover,
+    ProjectChecker,
 )
 from app.database import get_db
 from .models import (
@@ -117,6 +118,7 @@ async def update_project_title(
     title: str = Body(...),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
@@ -124,14 +126,9 @@ async def update_project_title(
             detail="Только админ может поменять название.",
         )
 
-    project = await db.get(ProjectModel, project_id)
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
-        )
-    project.title = title
+    db_project.title = title
     await db.commit()
-    await db.refresh(project)
+    await db.refresh(db_project)
 
     upd_project = await get_db_project(project_id, db)
     return upd_project
@@ -143,13 +140,8 @@ async def update_project_status(
     status: status_list = Body(...),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден"
-        )
-
     if not db_project.curator_id == user.user_id and await get_max_lvl(db, user) < 3:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено")
 
@@ -168,6 +160,7 @@ async def update_project_curator(
     curator_id: int = Body(...),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
@@ -185,12 +178,6 @@ async def update_project_curator(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Это не куратор."
         )
 
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
-        )
-
     db_project.curator_id = curator_id
     await db.commit()
     await db.refresh(db_project)
@@ -206,16 +193,12 @@ async def update_project_cover(
     cover_image: UploadFile,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только админы могут менять обложку.",
-        )
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     db_project.image_url = await upd_project_cover(cover_image, db_project.image_url)
@@ -232,17 +215,12 @@ async def add_project_participant(
     participant_id: int = Body(...),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только админы могут добавлять участников.",
-        )
-
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     new_participant = await db.get(UserModel, participant_id)
@@ -267,17 +245,14 @@ async def delete_project_participant(
     participant_id: int,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только админы могут удалить участника.",
         )
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
-        )
+
     participation = await db.scalar(
         select(ProjectUser).where(
             ProjectUser.user_id == participant_id, ProjectUser.project_id == project_id
@@ -301,6 +276,7 @@ async def add_project_link(
     link: ProjectLinkCreate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
@@ -308,11 +284,6 @@ async def add_project_link(
             detail="Только админы могут добавлять ссылки",
         )
 
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
-        )
     db_link = ProjectLink(**link.model_dump(), project_id=project_id)
 
     db.add(db_link)
@@ -329,16 +300,11 @@ async def update_project_description(
     description: str,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Только админ."
-        )
-
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     db_project.description = description
@@ -355,17 +321,12 @@ async def delete_project_link(
     link_id: int,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Только админы могут удалять ссылки.",
-        )
-
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     db_link = await db.get(ProjectLink, link_id)
@@ -387,6 +348,7 @@ async def delete_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
@@ -394,11 +356,6 @@ async def delete_project(
             detail="Только админ и выше может удалить проект",
         )
 
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
-        )
     if db_project.image_url:
         await delete_project_cover(db_project.image_url)
 
@@ -415,16 +372,11 @@ async def add_role(
     role: RoleCreate = Depends(RoleCreate.as_form),
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
-        )
-
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     if image:
@@ -446,16 +398,11 @@ async def remove_role(
     role_id: int,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
-        )
-
-    db_project = await db.get(ProjectModel, project_id)
-    if not db_project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
         )
 
     db_role = await db.get(ProjectRoleHistory, role_id)

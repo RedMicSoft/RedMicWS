@@ -11,13 +11,13 @@ class Role(Base):
 
     role_id: Mapped[int] = mapped_column(primary_key=True)
     role_name: Mapped[str] = mapped_column()
-    user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
     series_id: Mapped[int] = mapped_column(ForeignKey("series.id", ondelete="CASCADE"))
-    note: Mapped[str] = mapped_column()
+    note: Mapped[str | None] = mapped_column()
     checked: Mapped[bool] = mapped_column(default=False)
     timed: Mapped[bool] = mapped_column(default=False)
     state: Mapped[str] = mapped_column()
@@ -26,11 +26,11 @@ class Role(Base):
     user: Mapped["User"] = relationship("User", back_populates="roles")
 
     fixes: Mapped["Fix"] = relationship(
-        "Fix", back_populates="roles", cascade="all, delete-orphan"
+        "Fix", back_populates="role", cascade="all, delete-orphan"
     )
 
     records: Mapped["Record"] = relationship(
-        "Record", back_populates="roles", cascade="all, delete-orphan"
+        "Record", back_populates="role", cascade="all, delete-orphan"
     )
 
     series: Mapped["Series"] = relationship(

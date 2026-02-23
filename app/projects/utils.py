@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
-from fastapi import UploadFile, HTTPException, status
+from fastapi import UploadFile, HTTPException, status, Depends
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
 from app.projects.schemas import ProjectResponse
 from app.projects.models import Project as ProjectModel
 from app.users.models import User as UserModel
@@ -95,3 +97,15 @@ def delete_role_image(db_url: str):
         )
 
     path_to_delete.unlink()
+
+
+class ProjectChecker:
+    async def __call__(
+        self, project_id: int, db: AsyncSession = Depends(get_db)
+    ) -> ProjectModel:
+        db_project = await db.get(ProjectModel, project_id)
+        if not db_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+            )
+        return db_project
