@@ -26,7 +26,7 @@ async def delete_project_cover(db_path: str) -> None:
 
 
 async def upd_project_cover(image: UploadFile, exist_image: str | None):
-    if not image.filename.endswith(ALLOWED_IMG_EXT):
+    if not image.filename.lower().endswith(ALLOWED_IMG_EXT):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Недопустимый формат файла."
         )
@@ -66,7 +66,7 @@ async def get_db_project(project_id: int, db: AsyncSession):
 
 
 async def update_role_image(image: UploadFile, exist_path: str | None = None) -> str:
-    if not image.filename.endswith(ALLOWED_IMG_EXT):
+    if not image.filename.lower().endswith(ALLOWED_IMG_EXT):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Недопустимый формат."
         )
