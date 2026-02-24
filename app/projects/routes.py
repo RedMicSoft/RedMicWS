@@ -9,7 +9,7 @@ from fastapi import (
     Body,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, or_
 from sqlalchemy.orm import selectinload
 from app.projects.utils import (
     upd_project_cover,
@@ -58,11 +58,13 @@ async def get_projects(
 
     """
     stmt = select(ProjectModel)
-
     if user_id:
+        stmt = stmt.outerjoin(ProjectUser)
         if not await db.scalar(select(UserModel).where(UserModel.user_id == user_id)):
             raise HTTPException(status_code=404, detail="User not found")
-        stmt = stmt.join(ProjectUser).where(ProjectUser.user_id == user_id)
+        stmt = stmt.where(
+            or_(ProjectModel.curator_id == user_id, ProjectUser.user_id == user_id)
+        )
     db_projects = await db.scalars(stmt)
     projects = db_projects.all()
 
