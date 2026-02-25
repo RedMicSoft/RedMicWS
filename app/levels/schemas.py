@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -13,3 +15,8 @@ class LevelResponse(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LevelUpdate(BaseModel):
+    role_name: Optional[str] = Field(default=None)
+    access_level: Optional[int] = Field(default=None, ge=1, le=3)

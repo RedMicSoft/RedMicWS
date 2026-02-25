@@ -1,5 +1,5 @@
 from fastapi import APIRouter, FastAPI, status, HTTPException, Depends
-from .schemas import LevelCreate, LevelResponse
+from .schemas import LevelCreate, LevelResponse, LevelUpdate
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from .models import Level as LevelModel, UserLevel
@@ -72,22 +72,20 @@ async def create_level(
     return new_lvl
 
 
-@router.put("/{id}", response_model=LevelResponse, status_code=status.HTTP_200_OK)
+@router.patch("/{id}", response_model=LevelResponse, status_code=status.HTTP_200_OK)
 async def update_level(
-    level: LevelCreate,
+    level: LevelUpdate,
     id: int,
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
-    """
-    Только для гл. админа.\n
-    Обновляет роль по её id.
-    """
-    if await get_max_lvl(db, user) < 4 and level.access_level >= 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только гл. админы могут обновлять админские роли.",
-        )
+    if level.access_level:
+        if await get_max_lvl(db, user) < 4 and level.access_level >= 3:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Только гл. админы могут обновлять админские роли.",
+            )
+
     if await get_max_lvl(db, user) < 3:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -104,7 +102,9 @@ async def update_level(
         raise HTTPException(status_code=404, detail="Роль не найдена.")
 
     await db.execute(
-        update(LevelModel).where(LevelModel.level_id == id).values(**level.model_dump())
+        update(LevelModel)
+        .where(LevelModel.level_id == id)
+        .values(**level.model_dump(exclude_none=True))
     )
     await db.commit()
     return current_level

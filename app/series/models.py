@@ -10,7 +10,7 @@ import enum
 DELETED_USER_ID = -1
 
 
-class SeriesState(enum.Enum):
+class SeriesState(str, enum.Enum):
     MATERIALS_PREPARATION = "подготовка материалов"
     VOICE_OVER = "озвучка"
     MIXING = "сведение"
@@ -29,37 +29,47 @@ class Series(Base):
     second_deadline: Mapped[date] = mapped_column(server_default=func.current_date())
     exp_publish_date: Mapped[date] = mapped_column(server_default=func.current_date())
     ass_url: Mapped[str | None] = mapped_column()
-    state: Mapped[str] = mapped_column(
-        SAenum(SeriesState, native_enum=False),
+    state: Mapped[SeriesState] = mapped_column(
+        SAenum(
+            SeriesState,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         server_default=SeriesState.MATERIALS_PREPARATION.value,
     )
 
-    curator: Mapped[int] = mapped_column(
+    curator: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
-    sound_engineer: Mapped[int] = mapped_column(
+    sound_engineer: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
-    sound_engineer_minus: Mapped[int] = mapped_column(
+    raw_sound_engineer: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
-    timer: Mapped[int] = mapped_column(
+    timer: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
-    translator: Mapped[int] = mapped_column(
+    translator: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET DEFAULT"),
         default=DELETED_USER_ID,
         server_default=str(DELETED_USER_ID),
     )
-    created_at: Mapped[datetime] = mapped_column(Date, default=lambda: datetime.now())
+    director: Mapped[int | None] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
+        default=DELETED_USER_ID,
+        server_default=str(DELETED_USER_ID),
+        nullable=True,
+    )
+    created_at: Mapped[date] = mapped_column(Date, default=lambda: datetime.now())
 
     roles: Mapped[list["Role"]] = relationship(
         "Role",

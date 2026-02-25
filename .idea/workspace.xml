@@ -4,21 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Добавление новых таблиц для реализации логики серий.">
+    <list default="true" id="24949e2f-dfc6-4e57-ad0a-b7ecda184f41" name="Changes" comment="Обновление логики проверки на участие пользователя в проекте">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/levels/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/levels/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/levels/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrations/versions/61e9b0ce765e_series_and_role_tables_fixes.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/projects/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/projects/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/roles/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/roles/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/projects/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/projects/schemas.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/routes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/series/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/series/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/series/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/avatars/267f36df-b2be-40b6-a2e0-26bce479d736.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/avatars/5323539890005807223.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/avatars/TestAvatar.webp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/avatars/ldoe99k.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/srt/huy 2.srt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/media/srt/huy.srt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,22 +57,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.models.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tests.executor&quot;: &quot;Run&quot;,
-    &quot;Python.utils.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.models.executor": "Run",
+    "Python.tests.executor": "Run",
+    "Python.utils.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "settings.editor.selected.configurable": "terminal",
+    "to.speed.mode.migration.done": "true"
   }
-}</component>
+}]]></component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings module-name="RedMicWS" is-module-sdk="true">
+        <option name="myUseModuleSdk" value="true" />
+        <option name="myModuleName" value="RedMicWS" />
+      </console-settings>
+    </option>
+  </component>
   <component name="RunManager" selected="Python.tests">
     <configuration name="models" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RedMicWS" />
@@ -494,7 +499,39 @@
       <option name="project" value="LOCAL" />
       <updated>1771873756042</updated>
     </task>
-    <option name="localTasksCounter" value="42" />
+    <task id="LOCAL-00042" summary="Небольшой рефакторинг projects/routes.py: Все проверки на существование проекта вынесены в отдельный класс-зависимость для соответствия DRY.&#10;Дополнение логики для реализации серий и тестовые эндпоинты на серии.">
+      <option name="closed" value="true" />
+      <created>1771884164798</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1771884164798</updated>
+    </task>
+    <task id="LOCAL-00043" summary="Последняя БД миграция">
+      <option name="closed" value="true" />
+      <created>1771884178702</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1771884178702</updated>
+    </task>
+    <task id="LOCAL-00044" summary="Обновление логики проверки на участие пользователя в проекте">
+      <option name="closed" value="true" />
+      <created>1771924274631</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1771924274631</updated>
+    </task>
+    <task id="LOCAL-00045" summary="Обновление логики проверки на участие пользователя в проекте">
+      <option name="closed" value="true" />
+      <created>1771924492259</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1771924492259</updated>
+    </task>
+    <option name="localTasksCounter" value="46" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -509,9 +546,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="RoleHistory post\delete" />
-    <MESSAGE value="check n upd rest mini fix" />
-    <MESSAGE value="role history empty image fix" />
     <MESSAGE value="role history image fix" />
     <MESSAGE value="RoleHistoryResponse id add" />
     <MESSAGE value="minor fixes rests and PATCH users pydantic validate" />
@@ -534,6 +568,9 @@
     <MESSAGE value="Добавлен парсер для использования в сериях" />
     <MESSAGE value="Добавлено авто-удаление изменяющихся файлов на сервере. Добавлено хэширование демо." />
     <MESSAGE value="Добавление новых таблиц для реализации логики серий." />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавление новых таблиц для реализации логики серий." />
+    <MESSAGE value="Небольшой рефакторинг projects/routes.py: Все проверки на существование проекта вынесены в отдельный класс-зависимость для соответствия DRY.&#10;Дополнение логики для реализации серий и тестовые эндпоинты на серии." />
+    <MESSAGE value="Последняя БД миграция" />
+    <MESSAGE value="Обновление логики проверки на участие пользователя в проекте" />
+    <option name="LAST_COMMIT_MESSAGE" value="Обновление логики проверки на участие пользователя в проекте" />
   </component>
 </project>

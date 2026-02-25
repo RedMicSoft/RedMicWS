@@ -35,6 +35,11 @@ from .schemas import (
     status_list,
     ProjectLinkCreate,
     RoleCreate,
+    ProjectTitleUpdate,
+    ProjectStatusUpdate,
+    ProjectCuratorUpdate,
+    ProjectParticipantCreate,
+    ProjectDescriptionUpdate,
 )
 from app.users.utils import (
     get_max_lvl,
@@ -48,6 +53,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 @router.get("/", response_model=list[ProjectsResponse])
 async def get_projects(
     user_id: int = Query(default=None),
+    is_participating: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
 ):
@@ -58,6 +64,8 @@ async def get_projects(
 
     """
     stmt = select(ProjectModel)
+    if is_participating:
+        stmt = stmt.join(Project.participants).where(UserModel.user_id == user.user_id)
     if user_id:
         stmt = stmt.outerjoin(ProjectUser)
         if not await db.scalar(select(UserModel).where(UserModel.user_id == user_id)):
@@ -117,7 +125,7 @@ async def create_project(
 @router.patch("/{project_id}/title")
 async def update_project_title(
     project_id: int,
-    title: str = Body(...),
+    title: ProjectTitleUpdate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
@@ -128,7 +136,7 @@ async def update_project_title(
             detail="Только админ может поменять название.",
         )
 
-    db_project.title = title
+    db_project.title = title.title
     await db.commit()
     await db.refresh(db_project)
 
@@ -139,7 +147,7 @@ async def update_project_title(
 @router.put("/{project_id}/status")
 async def update_project_status(
     project_id: int,
-    status: status_list = Body(...),
+    status: ProjectStatusUpdate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
@@ -147,7 +155,7 @@ async def update_project_status(
     if not db_project.curator_id == user.user_id and await get_max_lvl(db, user) < 3:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено")
 
-    db_project.status = status
+    db_project.status = status.status
     await db.commit()
     await db.refresh(db_project)
 
@@ -159,7 +167,7 @@ async def update_project_status(
 @router.put("/{project_id}/curator")
 async def update_project_curator(
     project_id: int,
-    curator_id: int = Body(...),
+    curator: ProjectCuratorUpdate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
@@ -170,7 +178,7 @@ async def update_project_curator(
             detail="Кураторов можно менять только админам",
         )
 
-    new_curator = await db.get(UserModel, curator_id)
+    new_curator = await db.get(UserModel, curator.curator_id)
     if not new_curator:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
@@ -180,7 +188,7 @@ async def update_project_curator(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Это не куратор."
         )
 
-    db_project.curator_id = curator_id
+    db_project.curator_id = curator.curator_id
     await db.commit()
     await db.refresh(db_project)
 
@@ -214,7 +222,7 @@ async def update_project_cover(
 @router.post("/{project_id}/participants")
 async def add_project_participant(
     project_id: int,
-    participant_id: int = Body(...),
+    participant: ProjectParticipantCreate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
@@ -225,14 +233,16 @@ async def add_project_participant(
             detail="Только админы могут добавлять участников.",
         )
 
-    new_participant = await db.get(UserModel, participant_id)
+    new_participant = await db.get(UserModel, participant.participant_id)
     if not new_participant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Такого пользователя не существует.",
         )
 
-    new_participation = ProjectUser(user_id=participant_id, project_id=project_id)
+    new_participation = ProjectUser(
+        user_id=participant.participant_id, project_id=project_id
+    )
     db.add(new_participation)
     await db.commit()
     await db.refresh(new_participation)
@@ -299,7 +309,7 @@ async def add_project_link(
 @router.patch("/{project_id}/description")
 async def update_project_description(
     project_id: int,
-    description: str,
+    description: ProjectDescriptionUpdate,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
@@ -309,7 +319,7 @@ async def update_project_description(
             status_code=status.HTTP_403_FORBIDDEN, detail="Только админ."
         )
 
-    db_project.description = description
+    db_project.description = description.description
     await db.commit()
     await db.refresh(db_project)
 

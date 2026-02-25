@@ -115,3 +115,23 @@ class ProjectCreate(BaseModel):
             status=status,
             description=description,
         )
+
+
+class ProjectTitleUpdate(BaseModel):
+    title: str
+
+
+class ProjectStatusUpdate(BaseModel):
+    status: status_list
+
+
+class ProjectCuratorUpdate(BaseModel):
+    curator_id: int
+
+
+class ProjectParticipantCreate(BaseModel):
+    participant_id: int
+
+
+class ProjectDescriptionUpdate(BaseModel):
+    description: str

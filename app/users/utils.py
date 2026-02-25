@@ -112,7 +112,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 async def update_demo(demo: UploadFile, exist_path: str | None = None) -> str:
-    if not demo.filename.endswith(".mp4"):
+    if not demo.filename.lower().endswith(".mp4"):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="Демо должно быть в формате .mp4"
         )
@@ -133,7 +133,7 @@ async def update_demo(demo: UploadFile, exist_path: str | None = None) -> str:
 
 
 async def update_avatar(avatar: UploadFile, exist_path: str | None = None) -> str:
-    if not avatar.filename.endswith((".webp", ".png", ".jpg", ".jpeg")):
+    if not avatar.filename.lower().endswith((".webp", ".png", ".jpg", ".jpeg")):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="Неверный формат аватарки"
         )
@@ -154,7 +154,7 @@ async def update_avatar(avatar: UploadFile, exist_path: str | None = None) -> st
 
 
 async def save_role_image(image: UploadFile) -> str:
-    if not image.filename.endswith((".webp", ".png", ".jpg", ".jpeg")):
+    if not image.filename.lower().endswith((".webp", ".png", ".jpg", ".jpeg")):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Неверный формат фото.")
 
     directory = MEDIA_DIR / "roles"

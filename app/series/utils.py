@@ -7,7 +7,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 async def save_srt(srt: UploadFile) -> str:
-    if not srt.filename.endswith(".srt"):
+    if not srt.filename.lower().endswith(".srt"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Файл должен быть .srt")
 
     content = await srt.read()
