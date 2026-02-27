@@ -60,6 +60,7 @@ class RoleCreate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
+    project_id: int
     title: str
     created_at: date
     curator: UsersResponse
@@ -104,7 +105,7 @@ class ProjectCreate(BaseModel):
         type: Annotated[voice_types, Form(...)],
         created_at: Annotated[date, Form(...)],
         curator_id: Annotated[int, Form(...)],
-        description: Annotated[str, Form(...)],
+        description: Annotated[str | None, Form(...)],
         status: Annotated[status_list, Form(...)] = "подготовка",
     ) -> "ProjectCreate":
         return cls(
