@@ -552,25 +552,25 @@ async def add_role(
     return new_role
 
 
-@router.delete("/roles/{role_id}", status_code=status.HTTP_200_OK)
-async def delete_role(
-    role_id: int,
-    db: AsyncSession = Depends(get_db),
-    user: UserModel = Depends(get_current_user),
-):
-    if await get_max_lvl(db, user) < 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только куратор и выше могут удалить роль.",
-        )
-
-    db_role = await db.get(RoleHistory, role_id)
-    if not db_role:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
-        )
-
-    await db.delete(db_role)
-    await db.commit()
-
-    return "Роль была удалена."
+# @router.delete("/roles/{role_id}", status_code=status.HTTP_200_OK)
+# async def delete_role(
+#     role_id: int,
+#     db: AsyncSession = Depends(get_db),
+#     user: UserModel = Depends(get_current_user),
+# ):
+#     if await get_max_lvl(db, user) < 2:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Только куратор и выше могут удалить роль.",
+#         )
+#
+#     db_role = await db.get(RoleHistory, role_id)
+#     if not db_role:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+#         )
+#
+#     await db.delete(db_role)
+#     await db.commit()
+#
+#     return "Роль была удалена."
