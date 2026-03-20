@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
           script: |
-            cd /var/www/backend
+            cd /var/www/back
             # Активируем виртуальное окружение
             source venv/bin/activate
             # Запускаем миграции
