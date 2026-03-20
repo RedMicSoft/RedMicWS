@@ -47,8 +47,7 @@ class User(Base):
     )
 
     curator_projects: Mapped[list["Project"]] = relationship(
-        "Project",
-        back_populates="curator",
+        "Project", back_populates="curator", passive_deletes=True
     )
 
 
