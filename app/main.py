@@ -56,6 +56,12 @@ app.include_router(files_router)
 app.include_router(links_router)
 
 
+origins = [
+    "https://redmic-team.com",
+    "https://redmic-workspace-test.ru"
+    # можно добавить "http://localhost:3000" для локальной разработки
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Or replace "*" with your frontend's origin if known
