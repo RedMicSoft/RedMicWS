@@ -219,3 +219,4 @@ app/tests.py
 /media/srt/
 
 .idea/workspace.xml
+alembic.ini

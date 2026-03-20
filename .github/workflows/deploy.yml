@@ -18,6 +18,13 @@ jobs:
           ${{ secrets.BS }}
           EOF
 
+      - name: Create alembic.ini
+        shell: bash
+        run: |
+          cat << 'EOF' > alembic.ini
+          ${{ secrets.AI }}
+          EOF
+
       - name: Deploy to Server
         uses: easingthemes/ssh-deploy@main
         env:
