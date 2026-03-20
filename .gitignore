@@ -218,3 +218,4 @@ app/tests.py
 /media/avatars/
 /media/srt/
 
+.idea/workspace.xml

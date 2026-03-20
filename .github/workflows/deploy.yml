@@ -1,0 +1,55 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**' # Скрипт запустится только если изменения в папке backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create database.py from secret
+        shell: bash
+        run: |
+          cat << 'EOF' > app/database.py
+          ${{ secrets.BS }}
+          EOF
+
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.KEY }}
+          ARGS: "-rltgoDzvO --delete --exclude 'media/' --exclude 'team_files'"
+          SOURCE: "backend/" # Исходники вашего бэкенда
+          REMOTE_HOST: ${{ secrets.HOST }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: "/var/www/back/"
+
+      - name: Apply Database Migrations
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            cd /var/www/backend
+            # Активируем виртуальное окружение
+            source venv/bin/activate
+            # Запускаем миграции
+            # Убедитесь, что здесь подтянутся переменные окружения (.env)
+            alembic upgrade head
+
+      - name: Restart FastAPI
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            # Перезагружаем сервис, чтобы применились изменения кода
+            systemctl restart fastapi-app
