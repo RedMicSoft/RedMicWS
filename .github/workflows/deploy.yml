@@ -67,4 +67,4 @@ jobs:
           key: ${{ secrets.KEY }}
           script: |
             # Перезагружаем сервис, чтобы применились изменения кода
-            systemctl restart fastapi-app
+            systemctl restart RM_server
