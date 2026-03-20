@@ -36,10 +36,20 @@ jobs:
           key: ${{ secrets.KEY }}
           script: |
             cd /var/www/back
-            # Активируем виртуальное окружение
+            
+            # Проверяем, существует ли папка venv
+            if [ ! -d "venv" ]; then
+              echo "Creating virtual environment..."
+              python3 -m venv venv
+            fi
+            
+            # Активируем
             source venv/bin/activate
+            
+            # Устанавливаем зависимости (на случай, если они обновились)
+            pip install -r requirements.txt
+            
             # Запускаем миграции
-            # Убедитесь, что здесь подтянутся переменные окружения (.env)
             alembic upgrade head
 
       - name: Restart FastAPI
