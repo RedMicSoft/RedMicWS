@@ -22,7 +22,7 @@ jobs:
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KEY }}
-          ARGS: "-rltgoDzvO --delete --exclude 'media/' --exclude 'team_files/' --exclude '.git/' --exclude '.github/'"
+          ARGS: "-rltgoDzvO --delete"
           SOURCE: "./" # Исходники вашего бэкенда
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
