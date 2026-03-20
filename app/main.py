@@ -64,7 +64,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or replace "*" with your frontend's origin if known
+    allow_origins=origins,  # Or replace "*" with your frontend's origin if known
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
