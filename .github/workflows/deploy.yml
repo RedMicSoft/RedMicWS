@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'backend/**' # Скрипт запустится только если изменения в папке backend
 
 jobs:
   deploy:
@@ -24,8 +22,8 @@ jobs:
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KEY }}
-          ARGS: "-rltgoDzvO --delete --exclude 'media/' --exclude 'team_files'"
-          SOURCE: "backend/" # Исходники вашего бэкенда
+          ARGS: "-rltgoDzvO --delete --exclude 'media/' --exclude 'team_files/' --exclude '.git/' --exclude '.github/'"
+          SOURCE: "./" # Исходники вашего бэкенда
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
           TARGET: "/var/www/back/"
