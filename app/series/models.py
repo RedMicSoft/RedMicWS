@@ -74,7 +74,7 @@ class Series(Base):
     roles: Mapped[list["Role"]] = relationship(
         "Role",
         back_populates="series",
-        secondary="role_series",
+        cascade="all, delete-orphan",
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="series_list")
@@ -91,11 +91,16 @@ class Series(Base):
         cascade="all, delete-orphan",
     )
 
-    roles: Mapped[list["Role"]] = relationship(
-        "Role",
-        back_populates="series",
-        cascade="all, delete-orphan",
-    )
+    @property
+    def staff_ids(self) -> list[int]:
+        return [
+            self.curator,
+            self.sound_engineer,
+            self.raw_sound_engineer,
+            self.timer,
+            self.translator,
+            self.director,
+        ]
 
 
 class Material(Base):

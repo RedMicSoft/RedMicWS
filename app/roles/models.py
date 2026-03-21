@@ -1,9 +1,18 @@
-from sqlalchemy import ForeignKey, Text
+from sqlalchemy import ForeignKey, Text, Enum
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from app.database import Base, get_db
+import enum
 
 DELETED_USER_ID = -1
+
+
+class RoleState(enum.Enum):
+    NOT_LOADED = "не загружена"
+    NOT_TIMED = "не затаймлена"
+    NOT_CHECKED = "не проверена"
+    FIXES_NEED = "требуются фиксы"
+    MIXING_READY = "готова к сведению"
 
 
 class Role(Base):
@@ -20,16 +29,19 @@ class Role(Base):
     note: Mapped[str | None] = mapped_column()
     checked: Mapped[bool] = mapped_column(default=False)
     timed: Mapped[bool] = mapped_column(default=False)
-    state: Mapped[str] = mapped_column()
+    state: Mapped[RoleState] = mapped_column(
+        Enum(RoleState, values_callable=lambda obj: [item.value for item in obj]),
+        default=RoleState.NOT_LOADED,
+    )
     srt_url: Mapped[str] = mapped_column()
 
     user: Mapped["User"] = relationship("User", back_populates="roles")
 
-    fixes: Mapped["Fix"] = relationship(
+    fixes: Mapped[list["Fix"]] = relationship(
         "Fix", back_populates="role", cascade="all, delete-orphan"
     )
 
-    records: Mapped["Record"] = relationship(
+    records: Mapped[list["Record"]] = relationship(
         "Record", back_populates="role", cascade="all, delete-orphan"
     )
 
