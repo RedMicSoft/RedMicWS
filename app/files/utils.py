@@ -5,6 +5,8 @@ from sqlalchemy import select
 from starlette.staticfiles import StaticFiles
 import uuid
 import os
+import shutil
+from starlette.concurrency import run_in_threadpool
 from urllib.parse import quote
 
 from app.files.models import FileModel
@@ -15,12 +17,11 @@ FILES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 async def save_file(file: UploadFile):
-    content = await file.read()
-
     prev_filename = file.filename
     filename = f'{uuid.uuid4()}.{file.filename.split(".")[-1]}'
     file_path = FILES_DIR / filename
-    file_path.write_bytes(content)
+    with file_path.open("wb") as buffer:
+        await run_in_threadpool(shutil.copyfileobj, file.file, buffer)
 
     return {"file_url": f"/team_files/{filename}", "prev_filename": prev_filename}
 
