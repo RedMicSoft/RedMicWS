@@ -84,8 +84,10 @@ async def get_projects(
             "title": project.title,
             "status": project.status,
             "image_url": project.image_url,
-            "participants": project.participants
-            + [ProjectParticipantsResponse(user_id=project.curator_id)],
+            "participants": [
+                participant.user_id for participant in project.participants
+            ]
+            + [project.curator_id],
         }
         for project in projects
     ]
