@@ -87,7 +87,7 @@ class ProjectsResponse(BaseModel):
     title: str
     status: str
     image_url: str | None
-    participants: list[ProjectParticipantsResponse] | None
+    participants: list[int] | None
 
     model_config = ConfigDict(from_attributes=True)
 

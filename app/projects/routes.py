@@ -18,6 +18,7 @@ from app.projects.utils import (
     delete_role_image,
     delete_project_cover,
     ProjectChecker,
+    AccessChecker,
 )
 from app.database import get_db
 from .models import (
@@ -110,6 +111,7 @@ async def create_project(
     project: ProjectCreate = Depends(ProjectCreate.as_form),
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
+    check_access=Depends(AccessChecker()),
 ):
     """
     Создаёт новый проект.\n
@@ -118,11 +120,6 @@ async def create_project(
     type принимает только "закадр", "рекаст", "дубляж"\n
     status принимает только "подготовка", "в работе", "завершён", "приостановлен", "закрыт"\n
     """
-    if await get_max_lvl(db, user) < 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только куратор и выше могут создавать проект.",
-        )
     new_project = ProjectModel(**project.model_dump())
 
     if image:
@@ -143,13 +140,8 @@ async def update_project_title(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админ может поменять название.",
-        )
-
     db_project.title = title.title
     await db.commit()
     await db.refresh(db_project)
@@ -165,10 +157,8 @@ async def update_project_status(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if not db_project.curator_id == user.user_id and await get_max_lvl(db, user) < 3:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено")
-
     db_project.status = status.status
     await db.commit()
     await db.refresh(db_project)
@@ -185,21 +175,12 @@ async def update_project_curator(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Кураторов можно менять только админам",
-        )
-
     new_curator = await db.get(UserModel, curator.curator_id)
     if not new_curator:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
-        )
-    if await get_max_lvl(db, new_curator) < 2:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Это не куратор."
         )
 
     db_project.curator_id = curator.curator_id
@@ -218,13 +199,8 @@ async def update_project_cover(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут менять обложку.",
-        )
-
     db_project.image_url = await upd_project_cover(cover_image, db_project.image_url)
     await db.commit()
     await db.refresh(db_project)
@@ -240,13 +216,8 @@ async def add_project_participant(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут добавлять участников.",
-        )
-
     new_participant = await db.get(UserModel, participant.participant_id)
     if not new_participant:
         raise HTTPException(
@@ -272,13 +243,8 @@ async def delete_project_participant(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут удалить участника.",
-        )
-
     participation = await db.scalar(
         select(ProjectUser).where(
             ProjectUser.user_id == participant_id, ProjectUser.project_id == project_id
@@ -303,13 +269,8 @@ async def add_project_link(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут добавлять ссылки",
-        )
-
     db_link = ProjectLink(**link.model_dump(), project_id=project_id)
 
     db.add(db_link)
@@ -328,11 +289,6 @@ async def update_project_description(
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Только админ."
-        )
-
     db_project.description = description.description
     await db.commit()
     await db.refresh(db_project)
@@ -348,13 +304,8 @@ async def delete_project_link(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админы могут удалять ссылки.",
-        )
-
     db_link = await db.get(ProjectLink, link_id)
     if not db_link:
         raise HTTPException(
@@ -375,13 +326,8 @@ async def delete_project(
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только админ и выше может удалить проект",
-        )
-
     if db_project.image_url:
         await delete_project_cover(db_project.image_url)
 
@@ -399,12 +345,8 @@ async def add_role(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
-        )
-
     if image:
         image_url = await update_role_image(image)
 
@@ -425,12 +367,8 @@ async def remove_role(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Только админам."
-        )
-
     db_role = await db.get(ProjectRoleHistory, role_id)
     if not db_role:
         raise HTTPException(

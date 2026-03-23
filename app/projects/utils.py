@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.projects.schemas import ProjectResponse
 from app.projects.models import Project as ProjectModel
+from app.users import get_max_lvl, get_current_user
 from app.users.models import User as UserModel
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
@@ -109,3 +110,16 @@ class ProjectChecker:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
             )
         return db_project
+
+
+class AccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_project: ProjectModel = Depends(ProjectChecker()),
+        db: AsyncSession = Depends(get_db),
+    ):
+        if await get_max_lvl(db, user) < 2 and db_project.curator_id != user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
+            )
