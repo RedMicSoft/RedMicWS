@@ -29,6 +29,7 @@ class Series(Base):
     second_deadline: Mapped[date] = mapped_column(server_default=func.current_date())
     exp_publish_date: Mapped[date] = mapped_column(server_default=func.current_date())
     ass_url: Mapped[str | None] = mapped_column()
+    note: Mapped[str | None] = mapped_column(default="")
     state: Mapped[SeriesState] = mapped_column(
         SAenum(
             SeriesState,

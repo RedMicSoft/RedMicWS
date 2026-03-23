@@ -26,6 +26,7 @@ from .models import Series
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role
 
+
 router = APIRouter(prefix="/series", tags=["series"])
 
 

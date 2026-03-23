@@ -11,6 +11,7 @@ from app.users import get_max_lvl, get_current_user
 from app.users.models import User as UserModel
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
+from app.series.models import Series as SeriesModel
 
 MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / "media"
 PROJECT_IMAGES_DIR = (

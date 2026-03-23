@@ -7,6 +7,7 @@ from app.users.models import User
 
 from .schemas import SeriesParticipant
 from .models import Series
+from ..roles.models import Role
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media"
@@ -42,7 +43,7 @@ async def get_series_participants(series: Series, db: AsyncSession):
 
 
 # функция для расчета состояния серия(dub_progress) согласно диздоку. дай бог она работает))
-def compute_dub_progress(roles):
+def compute_dub_progress(roles: list[Role]):
     if not roles:
         return "no_roles"
     users_rests = []

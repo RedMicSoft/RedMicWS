@@ -10,6 +10,15 @@ class SeriesParticipant(BaseModel):
     avatar_url: str | None
 
 
+class ProjectSeriesResponse(BaseModel):
+    id: int
+    project_id: int
+    title: str
+    state: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SeriesListResponse(BaseModel):
     id: int
     project_id: int
@@ -23,3 +32,22 @@ class SeriesListResponse(BaseModel):
 
 class SeriesCreate(BaseModel):
     title: str
+    stage_time: int
+
+
+class SeriesCreateProjectResponse(BaseModel):
+    project_id: int
+    title: str
+    curator_id: int
+
+
+class SeriesCreateSeriesResponse(BaseModel):
+    id: int
+    project: SeriesCreateProjectResponse
+    title: str
+    first_deadline: date
+    second_deadline: date
+    exp_publish_date: date
+    note: str
+    state: str
+    ass_url: str | None

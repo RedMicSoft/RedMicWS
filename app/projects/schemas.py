@@ -3,7 +3,7 @@ from datetime import date
 from typing import Literal, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 from app.users.schemas import UsersResponse
-from app.series.schemas import SeriesListResponse
+from app.series.schemas import SeriesListResponse, ProjectSeriesResponse
 
 voice_types = Literal["закадр", "рекаст", "дубляж"]
 status_list = Literal["подготовка", "в работе", "завершён", "приостановлен", "закрыт"]
@@ -66,7 +66,7 @@ class ProjectResponse(BaseModel):
     curator: UsersResponse
     type: str
     status: str
-    series_list: list[SeriesListResponse] | None
+    series_list: list[ProjectSeriesResponse] | None
     links: list[ProjectLinkResponse] | None
     participants: list[ParticipantsResponse] | None
     roles: list[RoleResponse] | None
@@ -143,3 +143,7 @@ class ProjectParticipantCreate(BaseModel):
 
 class ProjectDescriptionUpdate(BaseModel):
     description: str
+
+
+class ProjectTypeUpdate(BaseModel):
+    type: voice_types

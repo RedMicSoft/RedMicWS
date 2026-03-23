@@ -42,6 +42,8 @@ from .schemas import (
     ProjectParticipantCreate,
     ProjectDescriptionUpdate,
     ProjectParticipantsResponse,
+    voice_types,
+    ProjectTypeUpdate,
 )
 from app.users.utils import (
     get_max_lvl,
@@ -421,3 +423,21 @@ async def get_project_participants(
     project_participants.append(project_curator)
 
     return project_participants
+
+
+@router.patch("/{project_id}/type")
+async def update_type(
+    type: ProjectTypeUpdate,
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+    db_project: ProjectModel = Depends(ProjectChecker()),
+    check_access=Depends(AccessChecker()),
+):
+    db_project.type = type.type
+    await db.commit()
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+
+    return upd_project
