@@ -58,8 +58,8 @@ app.include_router(links_router)
 
 origins = [
     "https://redmic-team.com",
-    "https://redmic-workspace-test.ru"
-    # можно добавить "http://localhost:3000" для локальной разработки
+    "https://redmic-workspace-test.ru",
+    "http://localhost:35565"
 ]
 
 app.add_middleware(
