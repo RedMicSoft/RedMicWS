@@ -448,7 +448,7 @@ async def remove_role(
     return upd_project
 
 
-@router.get("/projects/{project_id}/participants", response_model=list[UsersResponse])
+@router.get("/{project_id}/participants", response_model=list[UsersResponse])
 async def get_project_participants(
     project_id: int,
     db: AsyncSession = Depends(get_db),
