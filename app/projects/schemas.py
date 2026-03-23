@@ -76,13 +76,20 @@ class ProjectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProjectParticipantsResponse(BaseModel):
+    user_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProjectsResponse(BaseModel):
     project_id: int
     title: str
     status: str
     image_url: str | None
+    participants: list[ProjectParticipantsResponse] | None
 
-    ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectCreate(BaseModel):

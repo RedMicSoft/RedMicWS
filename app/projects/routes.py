@@ -40,12 +40,14 @@ from .schemas import (
     ProjectCuratorUpdate,
     ProjectParticipantCreate,
     ProjectDescriptionUpdate,
+    ProjectParticipantsResponse,
 )
 from app.users.utils import (
     get_max_lvl,
     get_current_user,
     check_curator,
 )
+from app.users.schemas import UsersResponse
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -63,7 +65,7 @@ async def get_projects(
     Если null, соответственно, все проекты.
 
     """
-    stmt = select(ProjectModel)
+    stmt = select(ProjectModel).options(selectinload(ProjectModel.participants))
     if is_participating:
         stmt = stmt.join(Project.participants).where(UserModel.user_id == user.user_id)
     if user_id:
@@ -76,7 +78,17 @@ async def get_projects(
     db_projects = await db.scalars(stmt)
     projects = db_projects.all()
 
-    return projects
+    return [
+        {
+            "project_id": project.project_id,
+            "title": project.title,
+            "status": project.status,
+            "image_url": project.image_url,
+            "participants": project.participants
+            + [ProjectParticipantsResponse(user_id=project.curator_id)],
+        }
+        for project in projects
+    ]
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -434,3 +446,38 @@ async def remove_role(
     upd_project = await get_db_project(project_id, db)
 
     return upd_project
+
+
+@router.get("/projects/{project_id}/participants", response_model=list[UsersResponse])
+async def get_project_participants(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    db_project = await db.scalar(
+        select(ProjectModel)
+        .where(ProjectModel.project_id == project_id)
+        .options(
+            selectinload(ProjectModel.participants).options(
+                selectinload(UserModel.team_roles),
+                selectinload(UserModel.contacts),
+            )
+        )
+    )
+    if not db_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+        )
+
+    project_participants = list(db_project.participants)
+    project_curator = await db.scalar(
+        select(UserModel)
+        .where(UserModel.user_id == db_project.curator_id)
+        .options(
+            selectinload(UserModel.team_roles),
+            selectinload(UserModel.contacts),
+        )
+    )
+    project_participants.append(project_curator)
+
+    return project_participants
