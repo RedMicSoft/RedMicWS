@@ -51,8 +51,6 @@ def compute_dub_progress(roles: list[Role]):
     for role in roles:
         if not role.user_id:
             return "no_roles"
-        # if role.state.value != "готова к сведению" and role.user.is_active == False:
-        #     users_rests.append(role.user_id)
         if (
             role.checked
             and role.timed
