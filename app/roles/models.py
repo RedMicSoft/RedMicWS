@@ -82,7 +82,9 @@ class RoleHistory(Base):
     __tablename__ = "role_history"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE")
+    )
     project_name: Mapped[str] = mapped_column()
     role_name: Mapped[str] = mapped_column()
     image_url: Mapped[str | None] = mapped_column()
