@@ -94,10 +94,14 @@ class ProjectRoleHistory(Base):
         ForeignKey("projects.project_id", ondelete="CASCADE")
     )
     role_title: Mapped[str] = mapped_column()
-    user_nickname: Mapped[str] = mapped_column()
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE")
+    )
     image_url: Mapped[str] = mapped_column()
 
     project: Mapped["Project"] = relationship(
         "Project",
         back_populates="roles",
     )
+
+    user: Mapped["User"] = relationship("User", back_populates="project_roles")

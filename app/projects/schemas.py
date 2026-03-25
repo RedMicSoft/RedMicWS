@@ -37,7 +37,7 @@ class ParticipantsUpdate(BaseModel):
 class RoleResponse(BaseModel):
     role_id: int
     role_title: str
-    user_nickname: str
+    user: UsersResponse
     image_url: str | None
 
     model_config = ConfigDict(from_attributes=True)
@@ -45,17 +45,17 @@ class RoleResponse(BaseModel):
 
 class RoleCreate(BaseModel):
     role_title: str
-    user_nickname: str
+    user_id: int
 
     @classmethod
     def as_form(
         cls,
         role_title: Annotated[str, Form(...)],
-        user_nickname: Annotated[str, Form(...)],
+        user_id: Annotated[int, Form(...)],
     ) -> "RoleCreate":
         return cls(
             role_title=role_title,
-            user_nickname=user_nickname,
+            user_id=user_id,
         )
 
 

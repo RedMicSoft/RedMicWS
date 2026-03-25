@@ -4,6 +4,8 @@ from sqlalchemy import String, ForeignKey
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
+from app.projects.models import ProjectRoleHistory
+
 
 class User(Base):
     __tablename__ = "users"
@@ -48,6 +50,11 @@ class User(Base):
 
     curator_projects: Mapped[list["Project"]] = relationship(
         "Project", back_populates="curator", passive_deletes=True
+    )
+
+    project_roles: Mapped[list["ProjectRoleHistory"]] = relationship(
+        "ProjectRoleHistory",
+        back_populates="user",
     )
 
 

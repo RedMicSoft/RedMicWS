@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.projects.schemas import ProjectResponse
-from app.projects.models import Project as ProjectModel
+from app.projects.models import Project as ProjectModel, ProjectRoleHistory
 from app.users import get_max_lvl, get_current_user
 from app.users.models import User as UserModel
 from sqlalchemy.orm import selectinload
@@ -51,7 +51,11 @@ async def get_db_project(project_id: int, db: AsyncSession):
             selectinload(ProjectModel.links),
             selectinload(ProjectModel.participants),
             selectinload(ProjectModel.series_list),
-            selectinload(ProjectModel.roles),
+            selectinload(ProjectModel.roles)
+            .selectinload(ProjectRoleHistory.user)
+            .options(
+                selectinload(UserModel.contacts), selectinload(UserModel.team_roles)
+            ),
             selectinload(ProjectModel.curator).options(
                 selectinload(UserModel.contacts), selectinload(UserModel.team_roles)
             ),

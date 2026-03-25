@@ -550,6 +550,19 @@ async def add_role(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
         )
 
+    role_exist_in_history = await db.scalar(
+        select(RoleHistory).where(
+            RoleHistory.user_id == user_id,
+            RoleHistory.role_name == role.role_name,
+            RoleHistory.project_name == role.project_name,
+        )
+    )
+    if role_exist_in_history:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Роль уже есть у пользователя.",
+        )
+
     new_role = RoleHistory(**role.model_dump(), user_id=user_id)
     if image:
         image_url = await save_role_image(image)
