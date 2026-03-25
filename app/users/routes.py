@@ -205,7 +205,7 @@ async def login(
 )
 async def add_user_level(
     user_id: int,
-    role_name: str,
+    level_id: int,
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -231,7 +231,7 @@ async def add_user_level(
         )
 
     role = await db.scalar(
-        select(Level).where(Level.role_name == role_name, Level.is_active == True)
+        select(Level).where(Level.level_id == level_id, Level.is_active == True)
     )
     if not role:
         raise HTTPException(
@@ -254,7 +254,9 @@ async def add_user_level(
     db.add(new_role)
     await db.commit()
     roles_list = await db.scalars(
-        select(Level).join(UserLevel).where(UserLevel.user_id == user_id)
+        select(Level)
+        .join(UserLevel)
+        .where(UserLevel.user_id == user_id, UserLevel.level_id != 6)
     )
 
     return roles_list.all()
