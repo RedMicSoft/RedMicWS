@@ -206,7 +206,7 @@ async def login(
 )
 async def add_user_level(
     user_id: int,
-    level_id: int,
+    levels: list[int],
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -231,28 +231,29 @@ async def add_user_level(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
         )
 
-    role = await db.scalar(
-        select(Level).where(Level.level_id == level_id, Level.is_active == True)
+    db_roles = await db.scalars(
+        select(Level).where(
+            Level.level_id.in_(levels),
+            Level.is_active == True,
+            Level.access_level != 4,
+            Level.access_level != 0,
+        )
     )
-    if not role:
+    roles = db_roles.all()
+    if not roles:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Роль не найдена"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Роли не найдены"
         )
 
-    if role.access_level == 4 or role.access_level == 0:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Только редактированием БД.",
-        )
+    for role in roles:
+        if role.access_level >= await get_max_lvl(db, user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Можно выдавать роли только ниже своей роли.",
+            )
+        new_role = UserLevel(level_id=role.level_id, user_id=user_id)
+        db.add(new_role)
 
-    if role.access_level >= await get_max_lvl(db, user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Можно выдавать роли только ниже своей роли.",
-        )
-
-    new_role = UserLevel(level_id=role.level_id, user_id=user_id)
-    db.add(new_role)
     await db.commit()
     roles_list = await db.scalars(
         select(Level)
