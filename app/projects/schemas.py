@@ -26,6 +26,7 @@ class ParticipantsResponse(BaseModel):
     user_id: int
     nickname: str
     avatar_url: str | None
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
 
