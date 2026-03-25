@@ -64,5 +64,4 @@ class Contacts(Base):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="contacts",
-        cascade="all, delete-orphan",
     )
