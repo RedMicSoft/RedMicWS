@@ -520,7 +520,10 @@ async def delete_level(
     db_user = await db.scalar(
         select(UserModel)
         .where(UserModel.user_id == user_id)
-        .options(selectinload(UserModel.team_roles))
+        .options(
+            selectinload(UserModel.team_roles),
+            with_loader_criteria(Level, Level.level_id != 6),
+        )
     )
 
     return db_user.team_roles
