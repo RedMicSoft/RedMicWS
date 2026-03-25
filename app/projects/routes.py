@@ -299,7 +299,7 @@ async def update_project_description(
     return upd_project
 
 
-@router.delete("/{project_id}/links/{link_id}")
+@router.delete("/{project_id}/links/{link_id}", status_code=status.HTTP_200_OK)
 async def delete_project_link(
     project_id: int,
     link_id: int,
@@ -316,7 +316,7 @@ async def delete_project_link(
 
     await db.delete(db_link)
     await db.commit()
-    await db.refresh(db_link)
+    #await db.refresh(db_link)
 
     upd_project = await get_db_project(project_id, db)
     return upd_project
