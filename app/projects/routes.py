@@ -316,7 +316,7 @@ async def delete_project_link(
 
     await db.delete(db_link)
     await db.commit()
-    await db.refresh(db_link)
+    #await db.refresh(db_link)
 
     upd_project = await get_db_project(project_id, db)
     return upd_project
