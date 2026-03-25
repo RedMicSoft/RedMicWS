@@ -55,11 +55,14 @@ class Contacts(Base):
     __tablename__ = "contacts"
 
     contact_id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column()
     link: Mapped[str] = mapped_column()
 
     user: Mapped["User"] = relationship(
         "User",
         back_populates="contacts",
+        cascade="all, delete-orphan",
     )
