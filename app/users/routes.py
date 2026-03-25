@@ -11,6 +11,7 @@ from .schemas import (
     ContactResponse,
     UserUpdate,
     RestCreate,
+    RestResponse,
 )
 from .models import User as UserModel, Contacts as ContactModel
 from .utils import (
@@ -222,7 +223,7 @@ async def add_user_level(
 
     db_user = await db.scalar(
         select(UserModel).where(
-            UserModel.user_id == user_id, UserModel.is_active == True
+            UserModel.user_id == user_id,
         )
     )
     if not db_user:
@@ -393,7 +394,9 @@ async def update_user_demo(
     return user.demo_url
 
 
-@router.post("/{user_id}/rest", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{user_id}/rest", status_code=status.HTTP_201_CREATED, response_model=RestResponse
+)
 async def create_rest(
     rest: RestCreate,
     user_id: int,
@@ -486,11 +489,7 @@ async def delete_level(
             detail="Только админы могут менять пользователям роли.",
         )
 
-    db_user = await db.scalar(
-        select(UserModel)
-        .where(UserModel.user_id == user_id)
-        .options(selectinload(UserModel.team_roles))
-    )
+    db_user = await db.scalar(select(UserModel).where(UserModel.user_id == user_id))
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
@@ -517,6 +516,12 @@ async def delete_level(
     await db.delete(user_level)
     await db.commit()
     await db.refresh(db_user)
+
+    db_user = await db.scalar(
+        select(UserModel)
+        .where(UserModel.user_id == user_id)
+        .options(selectinload(UserModel.team_roles))
+    )
 
     return db_user.team_roles
 

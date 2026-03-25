@@ -95,3 +95,11 @@ class RestCreate(BaseModel):
     rest_start: date
     rest_end: date
     rest_reason: str
+
+
+class RestResponse(BaseModel):
+    rest_start: date
+    rest_end: date
+    rest_reason: str
+
+    model_config = ConfigDict(from_attributes=True)
