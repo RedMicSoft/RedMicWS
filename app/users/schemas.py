@@ -85,7 +85,7 @@ class UserUpdate(BaseModel):
     """
 
     nickname: str | None = Field(default=None)
-    join_date: Optional[date] = Field(default=None, le=date.today())
+    join_date: Optional[date] = Field(default=None)
     birth_date: Optional[date] = Field(default=None, le=date.today())
     description: str | None = Field(default=None)
     contacts: list[ContactCreate] | None = Field(default=None)
