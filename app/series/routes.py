@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import (
@@ -15,13 +16,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.series.schemas import SeriesListResponse, SeriesCreate
+from app.series.schemas import (
+    SeriesListResponse,
+    SeriesCreate,
+    SeriesCreateProjectResponse,
+    SeriesCreateSeriesResponse,
+    SeriesParticipant,
+)
 from app.users.utils import get_current_user
 from app.roles.schemas import RoleCreate
-from ..projects.utils import ProjectChecker
+from ..projects.utils import ProjectChecker, AccessChecker
 from ..users import get_max_lvl
 from ..users.models import User as UserModel
-from .utils import save_srt, compute_dub_progress, get_series_participants
+from .utils import (
+    save_srt,
+    compute_dub_progress,
+    get_series_participants,
+    get_series_no_actors,
+)
 from .models import Series
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role
@@ -69,28 +81,68 @@ async def get_series(
     ]
 
 
-@router.post("/")
+@router.post("/{project_id}", response_model=SeriesCreateSeriesResponse)
 async def create_series(
     project_id: int,
     seria: SeriesCreate,
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
     db_project: ProjectModel = Depends(ProjectChecker()),
+    is_access=Depends(AccessChecker()),
 ):
-    if await get_max_lvl(db, user) < 2:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
-
+    curator = await db.get(UserModel, db_project.curator_id)
+    start_date = date.today()
+    first_deadline = start_date + timedelta(days=seria.stage_time)
+    second_deadline = first_deadline + timedelta(days=seria.stage_time)
+    exp_publish_date = second_deadline + timedelta(days=1)
     db_seria = Series(
-        **seria.model_dump(),
+        title=seria.title,
         project_id=project_id,
-        curator=null(),
+        curator=db_project.curator_id,
         sound_engineer=null(),
         raw_sound_engineer=null(),
         timer=null(),
         translator=null(),
-        director=null()
+        director=null(),
+        start_date=start_date,
+        first_deadline=first_deadline,
+        second_deadline=second_deadline,
+        exp_publish_date=exp_publish_date,
     )
     db.add(db_seria)
     await db.commit()
 
-    return db_seria
+    db_seria = await db.scalar(
+        select(Series)
+        .where(Series.id == db_seria.id)
+        .options(
+            selectinload(Series.materials),
+            selectinload(Series.links),
+            selectinload(Series.roles),
+        )
+    )
+    db_seria.no_actors = get_series_no_actors(db_seria)
+    db_seria.no_actors["curator"] = SeriesParticipant.model_validate(curator)
+
+    series_date = SeriesCreateSeriesResponse.model_validate(db_seria).model_dump()
+
+    series_date["project"] = SeriesCreateProjectResponse.model_validate(db_project)
+
+    series_response = SeriesCreateSeriesResponse(**series_date)
+
+    return series_response
+
+
+@router.get("/{series_id}")
+async def get_series_by_id(
+    series_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    db_series = await db.scalar(select(Series).where(Series.id == series_id))
+    if not db_series:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+        )
+
+    db_series = await db.scalar()

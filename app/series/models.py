@@ -103,6 +103,17 @@ class Series(Base):
             self.director,
         ]
 
+    @property
+    def staff_titles(self) -> list[str]:
+        return [
+            "curator",
+            "sound_engineer",
+            "raw_sound_engineer",
+            "timer",
+            "translator",
+            "director",
+        ]
+
 
 class Material(Base):
     __tablename__ = "materials"
@@ -125,3 +136,10 @@ class SeriesLink(Base):
     link_url: Mapped[str] = mapped_column()
 
     series: Mapped["Series"] = relationship("Series", back_populates="links")
+
+
+class AssFile(Base):
+    __tablename__ = "ass_fixes"
+
+    fix_id: Mapped[int] = mapped_column(primary_key=True)
+    fix_note: Mapped[str] = mapped_column()

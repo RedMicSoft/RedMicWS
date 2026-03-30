@@ -24,6 +24,13 @@ async def save_srt(srt: UploadFile) -> str:
     return f"/media/srt/{srt.filename}"
 
 
+def get_series_no_actors(series: Series) -> dict:
+    no_actors = {}
+    for staff_title in series.staff_titles:
+        no_actors[staff_title] = series.__dict__[staff_title]
+    return no_actors
+
+
 async def get_series_participants(series: Series, db: AsyncSession):
     participants = [role.user for role in series.roles]
     staff = await db.scalars(select(User).where(User.user_id.in_(series.staff_ids)))
