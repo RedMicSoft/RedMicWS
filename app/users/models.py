@@ -22,6 +22,7 @@ class User(Base):
     rest_reason: Mapped[str | None] = mapped_column()
     demo_url: Mapped[str | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
+    public_contact: Mapped[str | None] = mapped_column()
 
     contacts: Mapped[list["Contacts"]] = relationship(
         "Contacts", back_populates="user", cascade="all, delete-orphan"

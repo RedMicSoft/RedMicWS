@@ -49,6 +49,7 @@ class UserResponse(BaseModel):
     team_roles: list[LevelResponse]
     roles: list[RoleHistoryResponse] | None
     is_active: bool
+    public_contact: str | None
 
     @computed_field
     @property
@@ -68,6 +69,7 @@ class UsersResponse(BaseModel):
     avatar_url: str | None
     team_roles: list[LevelResponse] = []
     is_active: bool
+    public_contact: str | None
 
     @computed_field
     @property
@@ -89,6 +91,7 @@ class UserUpdate(BaseModel):
     birth_date: Optional[date] = Field(default=None, le=date.today())
     description: str | None = Field(default=None)
     contacts: list[ContactCreate] | None = Field(default=None)
+    public_contact: str | None = Field(default=None)
 
 
 class RestCreate(BaseModel):
