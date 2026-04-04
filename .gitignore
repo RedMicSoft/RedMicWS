@@ -220,3 +220,5 @@ app/tests.py
 
 .idea/workspace.xml
 alembic.ini
+
+.vscode
