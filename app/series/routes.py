@@ -11,7 +11,7 @@ from fastapi import (
     Depends,
     Query,
 )
-from sqlalchemy import select, null
+from sqlalchemy import select, null, union_all, literal, case, false, true, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,8 +22,12 @@ from app.series.schemas import (
     SeriesCreateProjectResponse,
     SeriesCreateSeriesResponse,
     SeriesParticipant,
+    UserWorkItem,
+    UserWorkSeriaInfo,
+    UserWorkProjectInfo,
+    UserWorkRoleInfo,
 )
-from app.users.utils import get_current_user
+from app.users.utils import get_current_user, authenticate_user
 from app.roles.schemas import RoleCreate
 from ..projects.utils import ProjectChecker, AccessChecker
 from ..users import get_max_lvl
@@ -36,10 +40,87 @@ from .utils import (
 )
 from .models import Series
 from app.projects.models import Project as ProjectModel
-from app.roles.models import Role
+from app.roles.models import Role, RoleState
 
 
 router = APIRouter(prefix="/series", tags=["series"])
+
+STAFF_FIELD_TO_WORK_TYPE = {
+    "curator": "куратор",
+    "sound_engineer": "звукорежиссёр",
+    "raw_sound_engineer": "звукорежиссёр минусовки",
+    "director": "режиссёр",
+    "timer": "таймер",
+    "translator": "саббер",
+}
+
+
+@router.get("/user/{user_id}/work", response_model=list[UserWorkItem])
+async def get_user_work(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    staff_subqueries = [
+        select(
+            Series.id.label("seria_id"),
+            Series.title.label("seria_title"),
+            Series.state.label("seria_state"),
+            Series.ass_url.label("ass_url"),
+            ProjectModel.project_id.label("project_id"),
+            ProjectModel.title.label("project_title"),
+            literal(work_type).label("work_type"),
+            false().label("role_is_ready"),
+            literal(None, type_=String).label("role_name"),
+            literal(None, type_=String).label("role_state"),
+        )
+        .join(ProjectModel, Series.project_id == ProjectModel.project_id)
+        .where(getattr(Series, field) == user_id)
+        for field, work_type in STAFF_FIELD_TO_WORK_TYPE.items()
+    ]
+
+    actor_subquery = (
+        select(
+            Series.id.label("seria_id"),
+            Series.title.label("seria_title"),
+            Series.state.label("seria_state"),
+            Series.ass_url.label("ass_url"),
+            ProjectModel.project_id.label("project_id"),
+            ProjectModel.title.label("project_title"),
+            literal("актёр").label("work_type"),
+            case((Role.state == RoleState.MIXING_READY, true()), else_=false()).label(
+                "role_is_ready"
+            ),
+            Role.role_name.label("role_name"),
+            Role.state.label("role_state"),
+        )
+        .join(Series, Role.series_id == Series.id)
+        .join(ProjectModel, Series.project_id == ProjectModel.project_id)
+        .where(Role.user_id == user_id)
+    )
+
+    rows = (await db.execute(union_all(*staff_subqueries, actor_subquery))).all()
+
+    return [
+        UserWorkItem(
+            seria=UserWorkSeriaInfo(
+                seria_id=r.seria_id,
+                seria_title=r.seria_title,
+                state=r.seria_state,
+            ),
+            project=UserWorkProjectInfo(
+                project_id=r.project_id,
+                project_title=r.project_title,
+            ),
+            work_type=r.work_type,
+            role_is_ready=bool(r.role_is_ready),
+            subs=r.ass_url is not None,
+            role=UserWorkRoleInfo(role_name=r.role_name, state=r.role_state)
+            if r.role_name is not None
+            else None,
+        )
+        for r in rows
+    ]
 
 
 @router.get("/", response_model=list[SeriesListResponse])

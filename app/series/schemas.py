@@ -67,6 +67,31 @@ class SeriesCreateSeriesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserWorkSeriaInfo(BaseModel):
+    seria_id: int
+    seria_title: str
+    state: str
+
+
+class UserWorkProjectInfo(BaseModel):
+    project_id: int
+    project_title: str
+
+
+class UserWorkRoleInfo(BaseModel):
+    role_name: str
+    state: str
+
+
+class UserWorkItem(BaseModel):
+    seria: UserWorkSeriaInfo
+    project: UserWorkProjectInfo
+    work_type: str
+    role_is_ready: bool
+    subs: bool
+    role: UserWorkRoleInfo | None
+
+
 class SeriesMaterialsResponse(BaseModel):
     id: int
     material_title: str
