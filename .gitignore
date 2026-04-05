@@ -208,6 +208,7 @@ __marimo__/
 
 # database
 app/database.py
+test_redmic.db
 app/tests.py
 #media
 .media
