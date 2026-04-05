@@ -222,3 +222,4 @@ app/tests.py
 alembic.ini
 
 .vscode
+.claude/settings.local.json
