@@ -102,35 +102,27 @@ class LevelChecker:
     def __init__(self, min_allowed_level: int):
         self.min_allowed_level = min_allowed_level
 
+    async def _is_access_level_sufficient(
+        self, user: UserModel, db: AsyncSession
+    ) -> bool:
+        try:
+            user_level = await get_max_lvl(db, user)
+            return user_level >= self.min_allowed_level
+        except HTTPException:
+            return False
+
     async def __call__(
         self,
         user: UserModel = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
     ):
-        return await get_max_lvl(db, user) >= self.min_allowed_level
-
+        if self._is_access_level_sufficient(user, db):
+            return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
 
 at_least_curator = LevelChecker(CURATOR_LEVEL)
 at_least_admin = LevelChecker(ADMIN_LEVEL)
-
-
-class CustomLevelChecker(LevelChecker):
-    def __init__(
-        self,
-        min_allowed_level: int,
-        custom_function: Callable[[UserModel, AsyncSession], Awaitable[bool]],
-    ):
-        super().__init__(min_allowed_level)
-        self.custom_function = custom_function
-
-    async def __call__(
-        self,
-        user: UserModel = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db),
-    ):
-        return super().__call__(user, db) or (
-            await self.custom_function(user, db) if self.custom_function else False
-        )
+at_least_senior_admin = LevelChecker(SENIOR_ADMIN_LEVEL)
 
 
 async def get_max_lvl(db: AsyncSession, user: UserModel) -> int:
