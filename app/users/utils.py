@@ -15,6 +15,9 @@ from .models import User as UserModel
 
 from app.levels.models import UserLevel, Level as LevelModel
 
+from collections.abc import Callable
+from typing import Awaitable
+
 scheduler = AsyncIOScheduler()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ACCESS_TOKEN_EXPIRE_DAYS = 30
@@ -24,6 +27,17 @@ ALGORITHM = "HS256"
 
 MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / "media"
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+MEMBER_LEVEL = 1
+CURATOR_LEVEL = 2
+ADMIN_LEVEL = 3
+SENIOR_ADMIN_LEVEL = 4
+
+CREDENTIALS_EXCEPTION = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Could not validate credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
 
 def hash_password(password: str) -> str:
@@ -50,23 +64,16 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-):
+async def authenticate_user(token: str = Depends(oauth2_scheme)) -> str:
     """
-    Проверяет JWT и возвращает пользователя из базы.
+    Проверяет JWT запроса и возвращает ID пользователя.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("id")
         if user_id is None:
-            raise credentials_exception
+            raise CREDENTIALS_EXCEPTION
+        return user_id
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -74,12 +81,56 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.PyJWTError:
-        raise credentials_exception
+        raise CREDENTIALS_EXCEPTION
+
+
+async def get_current_user(
+    user_id: str = Depends(authenticate_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Проверяет JWT и возвращает пользователя из базы.
+    """
     result = await db.scalars(select(UserModel).where(UserModel.user_id == user_id))
     user = result.first()
     if user is None:
-        raise credentials_exception
+        raise CREDENTIALS_EXCEPTION  # Клиент не должен знать, что пользователь не найден
     return user
+
+
+class LevelChecker:
+    def __init__(self, min_allowed_level: int):
+        self.min_allowed_level = min_allowed_level
+
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ):
+        return await get_max_lvl(db, user) >= self.min_allowed_level
+
+
+at_least_curator = LevelChecker(CURATOR_LEVEL)
+at_least_admin = LevelChecker(ADMIN_LEVEL)
+
+
+class CustomLevelChecker(LevelChecker):
+    def __init__(
+        self,
+        min_allowed_level: int,
+        custom_function: Callable[[UserModel, AsyncSession], Awaitable[bool]],
+    ):
+        super().__init__(min_allowed_level)
+        self.custom_function = custom_function
+
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ):
+        return super().__call__(user, db) or (
+            await self.custom_function(user, db) if self.custom_function else False
+        )
 
 
 async def get_max_lvl(db: AsyncSession, user: UserModel) -> int:
