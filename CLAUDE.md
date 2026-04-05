@@ -21,9 +21,13 @@ docker-compose up --build
 # Database migrations
 alembic upgrade head
 alembic revision --autogenerate -m "description"
-```
 
-There is no test suite currently.
+# Run tests
+pip install -r requirements-test.txt
+pytest
+pytest -v                        # verbose
+pytest tests/test_foo.py         # specific file
+```
 
 ## Architecture
 
@@ -32,8 +36,10 @@ There is no test suite currently.
 **Entry point:** [app/main.py](app/main.py) — mounts routers, configures CORS, serves `/media` and `/team_files` static mounts.
 
 **Hidden files (not in git, reconstructed by CI from GitHub secrets):**
-- `app/database.py` — SQLAlchemy async engine and session setup
+- `app/database.py` — SQLAlchemy async engine and session setup (`Base`, `get_db`, `async_session_maker`)
 - `alembic.ini` — Alembic database URL
+
+For local development, create `app/database.py` manually (see the file for the template — it reads `DATABASE_URL` from `.env`, defaulting to the Docker Compose PostgreSQL).
 
 ### Module Structure
 
@@ -49,6 +55,7 @@ Each module under `app/` follows the same pattern: `models.py` (SQLAlchemy ORM),
 | `files/` | File upload metadata tracking |
 | `links/` | Generic URL links attached to projects/series |
 | `migrations/` | Alembic migration versions |
+| `tests/` | pytest test suite |
 
 ### Key Domain Concepts
 
@@ -59,6 +66,25 @@ Each module under `app/` follows the same pattern: `models.py` (SQLAlchemy ORM),
 **Project types:** `off_screen`, `recast`, `dub`
 
 **Deleted user sentinel:** `DELETED_USER_ID = -1` — when a user is deleted, their records in roles/projects are reassigned to this ID rather than cascade-deleted.
+
+## Testing
+
+**Stack:** pytest + pytest-asyncio + httpx + SQLite (aiosqlite) — никакой внешней БД не нужно.
+
+**How it works:**
+- `setup_database` (session-scoped) — создаёт все таблицы в `test_redmic.db` перед сессией, удаляет после.
+- `client` — `httpx.AsyncClient` с `ASGITransport`; переопределяет `get_db` на тестовую SQLite сессию.
+- `auth_headers` — параметризованный фикстур; создаёт пользователя нужного уровня доступа напрямую в БД и возвращает `{"Authorization": "Bearer ..."}`.
+
+**`auth_headers` usage** (requires `@pytest.mark.parametrize` indirect):
+```python
+@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+async def test_something(client, auth_headers):
+    response = await client.get("/users/", headers=auth_headers)
+    assert response.status_code == 200
+```
+
+Access levels: `1` — участник, `2` — куратор, `3` — администратор, `4` — главный администратор.
 
 ### Auth & Permissions
 
