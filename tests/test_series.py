@@ -16,7 +16,7 @@ async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncCl
 
 
 # ---------------------------------------------------------------------------
-# Scenario 1: одна серия, пользователь занимает все 6 должностей + 2 роли актёра
+# GET /series/user/{user_id}/work
 # ---------------------------------------------------------------------------
 
 
@@ -63,11 +63,6 @@ async def test_work_all_positions_and_roles(
             assert item["role"] is None
 
 
-# ---------------------------------------------------------------------------
-# Scenario 2: два проекта — в одном актёр, в другом куратор
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
 async def test_work_across_two_projects(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
@@ -102,11 +97,6 @@ async def test_work_across_two_projects(
     assert staff_item["role"] is None
 
 
-# ---------------------------------------------------------------------------
-# Scenario 3: у пользователя нет никакой работы
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
 async def test_work_empty_when_no_assignments(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
@@ -121,19 +111,9 @@ async def test_work_empty_when_no_assignments(
     assert response.json() == []
 
 
-# ---------------------------------------------------------------------------
-# Scenario 4: запрос без авторизации → 401
-# ---------------------------------------------------------------------------
-
-
 async def test_work_requires_auth(client: AsyncClient):
     response = await client.get("/series/user/1/work")
     assert response.status_code == 401
-
-
-# ---------------------------------------------------------------------------
-# Дополнительные тесты
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
