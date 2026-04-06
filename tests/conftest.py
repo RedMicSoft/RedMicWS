@@ -10,6 +10,8 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
+from fastapi import status
+
 # media/ и team_files/ создаются при импорте app-модулей, но на всякий случай:
 Path("media").mkdir(exist_ok=True)
 Path("team_files").mkdir(exist_ok=True)
@@ -120,6 +122,8 @@ async def auth_headers(
         "/users/login",
         data={"username": nickname, "password": "test_pass"},
     )
-    assert response.status_code == 200, f"Логин не удался: {response.text}"
+    assert (
+        response.status_code == status.HTTP_200_OK
+    ), f"Логин не удался: {response.text}"
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

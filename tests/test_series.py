@@ -1,18 +1,21 @@
 import pytest
 from httpx import AsyncClient
 
+from fastapi import status
+
 from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series, STAFF_WORK_TYPES
 from tests.helpers.roles import create_role
 from app.roles.models import RoleState
 from app.series.models import SeriesState
+from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncClient):
     response = await client.get("/series/", headers=auth_headers)
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "В данном проекте ещё нет серий."}
 
 
@@ -21,7 +24,7 @@ async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncCl
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_all_positions_and_roles(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -44,7 +47,7 @@ async def test_work_all_positions_and_roles(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 8  # 6 должностей + 2 роли
 
@@ -64,7 +67,7 @@ async def test_work_all_positions_and_roles(
             assert item["role"] is None
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_across_two_projects(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -82,7 +85,7 @@ async def test_work_across_two_projects(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 2
 
@@ -98,7 +101,7 @@ async def test_work_across_two_projects(
     assert staff_item["role"] is None
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_empty_when_no_assignments(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -108,16 +111,16 @@ async def test_work_empty_when_no_assignments(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
 
 async def test_work_requires_auth(client: AsyncClient):
     response = await client.get("/series/user/1/work")
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_role_is_ready_flag(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -134,7 +137,7 @@ async def test_work_role_is_ready_flag(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 2
 
@@ -145,7 +148,7 @@ async def test_work_role_is_ready_flag(
     assert ready[0]["role"]["state"] == RoleState.MIXING_READY.value
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_subs_flag(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -171,7 +174,7 @@ async def test_work_subs_flag(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
 
     by_seria = {item["seria"]["seria_id"]: item for item in data}
@@ -179,7 +182,7 @@ async def test_work_subs_flag(
     assert by_seria[series_without_ass.id]["subs"] is False
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_staff_role_is_ready_is_false(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -197,15 +200,15 @@ async def test_work_staff_role_is_ready_is_false(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     for item in response.json():
         assert item["role_is_ready"] is False
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_user_not_found(auth_headers: dict, client: AsyncClient):
     response = await client.get("/series/user/999999/work", headers=auth_headers)
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------------------
@@ -215,16 +218,16 @@ async def test_work_user_not_found(auth_headers: dict, client: AsyncClient):
 
 async def test_delete_series_no_auth(client: AsyncClient):
     response = await client.delete("/series/999999")
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_delete_series_not_found(auth_headers: dict, client: AsyncClient):
     response = await client.delete("/series/999999", headers=auth_headers)
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_delete_series_forbidden_member(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -233,10 +236,10 @@ async def test_delete_series_forbidden_member(
     series = await create_series(project.project_id, request)
 
     response = await client.delete(f"/series/{series.id}", headers=auth_headers)
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_delete_series_ok_curator_level(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -245,19 +248,21 @@ async def test_delete_series_ok_curator_level(
     series = await create_series(project.project_id, request)
 
     response = await client.delete(f"/series/{series.id}", headers=auth_headers)
-    assert response.status_code == 204
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
 async def test_delete_series_ok_project_curator(
     client: AsyncClient, request: pytest.FixtureRequest
 ):
-    curator, level = await create_user_with_level(access_level=1, request=request)
+    curator, level = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
     project = await create_project(curator_id=curator.user_id, request=request)
     series = await create_series(project.project_id, request)
     headers = await login_user(client, curator.nickname)
 
     response = await client.delete(f"/series/{series.id}", headers=headers)
-    assert response.status_code == 204
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
 # ---------------------------------------------------------------------------
@@ -267,16 +272,16 @@ async def test_delete_series_ok_project_curator(
 
 async def test_update_series_data_no_auth(client: AsyncClient):
     response = await client.patch("/series/999999/data", json={})
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_not_found(auth_headers: dict, client: AsyncClient):
     response = await client.patch("/series/999999/data", json={}, headers=auth_headers)
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_update_series_data_forbidden_member(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -288,10 +293,10 @@ async def test_update_series_data_forbidden_member(
     response = await client.patch(
         f"/series/{series.id}/data", json={}, headers=auth_headers
     )
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_ok_full(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -312,7 +317,7 @@ async def test_update_series_data_ok_full(
     response = await client.patch(
         f"/series/{series.id}/data", json=payload, headers=auth_headers
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["seria_title"] == "Обновлённое название"
     assert data["start_date"] == "2025-03-01"
@@ -323,7 +328,7 @@ async def test_update_series_data_ok_full(
     assert data["state"] == SeriesState.MIXING.value
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_ok_partial(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -337,13 +342,13 @@ async def test_update_series_data_ok_partial(
         json={"note": "новое"},
         headers=auth_headers,
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["note"] == "новое"
     assert data["seria_title"] == series.title  # не изменился
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_ok_empty_body(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -357,13 +362,13 @@ async def test_update_series_data_ok_empty_body(
     response = await client.patch(
         f"/series/{series.id}/data", json={}, headers=auth_headers
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["seria_title"] == series.title
     assert data["state"] == SeriesState.VOICE_OVER.value
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_response_shape(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -375,7 +380,7 @@ async def test_update_series_data_response_shape(
     response = await client.patch(
         f"/series/{series.id}/data", json={}, headers=auth_headers
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert set(response.json().keys()) == {
         "seria_title",
         "start_date",
@@ -402,7 +407,9 @@ async def test_update_series_data_ok_as_staff_member(
     staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
 ):
     """Участник уровня 1, назначенный на любую должность серии, может изменить данные."""
-    staff_user, _ = await create_user_with_level(access_level=1, request=request)
+    staff_user, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
     other = await create_user(request)
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(
@@ -415,11 +422,11 @@ async def test_update_series_data_ok_as_staff_member(
         json={"note": f"изменено через {staff_field}"},
         headers=headers,
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()["note"] == f"изменено через {staff_field}"
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_invalid_date_iso_format(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -433,10 +440,10 @@ async def test_update_series_data_invalid_date_iso_format(
         json={"start_date": "2025-01-15"},
         headers=auth_headers,
     )
-    assert response.status_code == 422
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_invalid_date_nonsense(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -450,10 +457,10 @@ async def test_update_series_data_invalid_date_nonsense(
         json={"first_stage_date": "не дата"},
         headers=auth_headers,
     )
-    assert response.status_code == 422
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_invalid_state(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
@@ -467,14 +474,14 @@ async def test_update_series_data_invalid_state(
         json={"state": "несуществующий_статус"},
         headers=auth_headers,
     )
-    assert response.status_code == 422
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.mark.parametrize(
     "state",
     [s.value for s in SeriesState],
 )
-@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_all_valid_states(
     state: str,
     auth_headers: dict,
@@ -491,5 +498,5 @@ async def test_update_series_data_all_valid_states(
         json={"state": state},
         headers=auth_headers,
     )
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()["state"] == state

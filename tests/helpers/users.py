@@ -4,6 +4,8 @@ from datetime import date
 import pytest
 from httpx import AsyncClient
 
+from fastapi import status
+
 from tests.conftest import TestSession
 from tests.helpers import _uid
 from app.levels.models import Level, UserLevel
@@ -79,5 +81,5 @@ async def create_user_with_level(
 
 async def login_user(client: AsyncClient, nickname: str, password: str = "x") -> dict:
     response = await client.post("/users/login", data={"username": nickname, "password": password})
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
