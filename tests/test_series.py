@@ -1,99 +1,16 @@
 import asyncio
-import uuid
 import pytest
-from datetime import date
 from httpx import AsyncClient
 
 from tests.conftest import TestSession
-from app.levels.models import Level, UserLevel
+from tests.helpers.users import create_user, create_user_with_level, login_user
+from tests.helpers.projects import create_project
+from tests.helpers.series import create_series, STAFF_WORK_TYPES
+from tests.helpers.roles import create_role
+from app.levels.models import Level
 from app.users.models import User
-from app.users.utils import hash_password
 from app.projects.models import Project
-from app.series.models import Series, SeriesState
-from app.roles.models import Role, RoleState
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _uid() -> str:
-    return uuid.uuid4().hex[:8]
-
-
-async def _create_user() -> User:
-    async with TestSession() as s:
-        user = User(
-            nickname=f"worker_{_uid()}",
-            hashed_password=hash_password("x"),
-            join_date=date.today(),
-        )
-        s.add(user)
-        await s.commit()
-        await s.refresh(user)
-        return user
-
-
-async def _create_project(curator_id: int) -> Project:
-    async with TestSession() as s:
-        project = Project(
-            title=f"proj_{_uid()}",
-            type="dub",
-            curator_id=curator_id,
-            created_at=date.today(),
-            status="active",
-        )
-        s.add(project)
-        await s.commit()
-        await s.refresh(project)
-        return project
-
-
-async def _create_series(project_id: int, **kwargs) -> Series:
-    today = date.today()
-    defaults = dict(
-        title=f"series_{_uid()}",
-        project_id=project_id,
-        start_date=today,
-        first_deadline=today,
-        second_deadline=today,
-        exp_publish_date=today,
-        state=SeriesState.VOICE_OVER,
-    )
-    defaults.update(kwargs)
-    async with TestSession() as s:
-        series = Series(**defaults)
-        s.add(series)
-        await s.commit()
-        await s.refresh(series)
-        return series
-
-
-async def _create_role(series_id: int, user_id: int, **kwargs) -> Role:
-    defaults = dict(
-        role_name=f"role_{_uid()}",
-        user_id=user_id,
-        series_id=series_id,
-        srt_url="",
-    )
-    defaults.update(kwargs)
-    async with TestSession() as s:
-        role = Role(**defaults)
-        s.add(role)
-        await s.commit()
-        await s.refresh(role)
-        return role
-
-
-STAFF_WORK_TYPES = {
-    "куратор",
-    "звукорежиссёр",
-    "звукорежиссёр минусовки",
-    "режиссёр",
-    "таймер",
-    "саббер",
-}
+from app.roles.models import RoleState
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
@@ -109,10 +26,10 @@ async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncCl
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_all_positions_and_roles(auth_headers, client: AsyncClient):
-    worker = await _create_user()
-    project = await _create_project(curator_id=worker.user_id)
-    series = await _create_series(
+async def test_work_all_positions_and_roles(auth_headers: dict, client: AsyncClient):
+    worker = await create_user()
+    project = await create_project(curator_id=worker.user_id)
+    series = await create_series(
         project.project_id,
         curator=worker.user_id,
         sound_engineer=worker.user_id,
@@ -121,8 +38,8 @@ async def test_work_all_positions_and_roles(auth_headers, client: AsyncClient):
         translator=worker.user_id,
         director=worker.user_id,
     )
-    await _create_role(series.id, worker.user_id)
-    await _create_role(series.id, worker.user_id)
+    await create_role(series.id, worker.user_id)
+    await create_role(series.id, worker.user_id)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -154,16 +71,16 @@ async def test_work_all_positions_and_roles(auth_headers, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_across_two_projects(auth_headers, client: AsyncClient):
-    worker = await _create_user()
-    other = await _create_user()
+async def test_work_across_two_projects(auth_headers: dict, client: AsyncClient):
+    worker = await create_user()
+    other = await create_user()
 
-    project1 = await _create_project(curator_id=other.user_id)
-    series1 = await _create_series(project1.project_id)
-    await _create_role(series1.id, worker.user_id)
+    project1 = await create_project(curator_id=other.user_id)
+    series1 = await create_series(project1.project_id)
+    await create_role(series1.id, worker.user_id)
 
-    project2 = await _create_project(curator_id=other.user_id)
-    series2 = await _create_series(project2.project_id, curator=worker.user_id)
+    project2 = await create_project(curator_id=other.user_id)
+    series2 = await create_series(project2.project_id, curator=worker.user_id)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -191,8 +108,8 @@ async def test_work_across_two_projects(auth_headers, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_empty_when_no_assignments(auth_headers, client: AsyncClient):
-    worker = await _create_user()
+async def test_work_empty_when_no_assignments(auth_headers: dict, client: AsyncClient):
+    worker = await create_user()
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -218,15 +135,15 @@ async def test_work_requires_auth(client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_role_is_ready_flag(auth_headers, client: AsyncClient):
+async def test_work_role_is_ready_flag(auth_headers: dict, client: AsyncClient):
     """role_is_ready=True только у роли в состоянии MIXING_READY."""
-    worker = await _create_user()
-    other = await _create_user()
-    project = await _create_project(curator_id=other.user_id)
-    series = await _create_series(project.project_id)
+    worker = await create_user()
+    other = await create_user()
+    project = await create_project(curator_id=other.user_id)
+    series = await create_series(project.project_id)
 
-    await _create_role(series.id, worker.user_id, state=RoleState.MIXING_READY)
-    await _create_role(series.id, worker.user_id, state=RoleState.NOT_LOADED)
+    await create_role(series.id, worker.user_id, state=RoleState.MIXING_READY)
+    await create_role(series.id, worker.user_id, state=RoleState.NOT_LOADED)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -244,18 +161,18 @@ async def test_work_role_is_ready_flag(auth_headers, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_subs_flag(auth_headers, client: AsyncClient):
+async def test_work_subs_flag(auth_headers: dict, client: AsyncClient):
     """subs=True если у серии задан ass_url, иначе False."""
-    worker = await _create_user()
-    other = await _create_user()
-    project = await _create_project(curator_id=other.user_id)
+    worker = await create_user()
+    other = await create_user()
+    project = await create_project(curator_id=other.user_id)
 
-    series_with_ass = await _create_series(
+    series_with_ass = await create_series(
         project.project_id,
         curator=worker.user_id,
         ass_url="/media/subs/test.ass",
     )
-    series_without_ass = await _create_series(
+    series_without_ass = await create_series(
         project.project_id,
         sound_engineer=worker.user_id,
         ass_url=None,
@@ -274,11 +191,11 @@ async def test_work_subs_flag(auth_headers, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_staff_role_is_ready_is_false(auth_headers, client: AsyncClient):
+async def test_work_staff_role_is_ready_is_false(auth_headers: dict, client: AsyncClient):
     """Для всех должностей (не актёр) role_is_ready всегда False."""
-    worker = await _create_user()
-    project = await _create_project(curator_id=worker.user_id)
-    await _create_series(
+    worker = await create_user()
+    project = await create_project(curator_id=worker.user_id)
+    await create_series(
         project.project_id,
         curator=worker.user_id,
         sound_engineer=worker.user_id,
@@ -298,31 +215,6 @@ async def test_work_staff_role_is_ready_is_false(auth_headers, client: AsyncClie
 # ---------------------------------------------------------------------------
 
 
-async def _create_user_with_level(access_level: int) -> tuple[User, Level]:
-    async with TestSession() as s:
-        level = Level(role_name=f"role_{_uid()}", access_level=access_level, is_active=True)
-        s.add(level)
-        await s.flush()
-        user = User(
-            nickname=f"u_{_uid()}",
-            hashed_password=hash_password("x"),
-            join_date=date.today(),
-        )
-        s.add(user)
-        await s.flush()
-        s.add(UserLevel(level_id=level.level_id, user_id=user.user_id))
-        await s.commit()
-        await s.refresh(user)
-        await s.refresh(level)
-        return user, level
-
-
-async def _login_user(client: AsyncClient, nickname: str, password: str = "x") -> dict:
-    response = await client.post("/users/login", data={"username": nickname, "password": password})
-    assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-
 async def test_delete_series_no_auth(client: AsyncClient):
     response = await client.delete("/series/999999")
     assert response.status_code == 401
@@ -338,9 +230,9 @@ async def test_delete_series_not_found(auth_headers: dict, client: AsyncClient):
 async def test_delete_series_forbidden_member(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
-    other = await _create_user()
-    project = await _create_project(curator_id=other.user_id)
-    series = await _create_series(project.project_id)
+    other = await create_user()
+    project = await create_project(curator_id=other.user_id)
+    series = await create_series(project.project_id)
 
     async def _cleanup():
         async with TestSession() as s:
@@ -362,9 +254,9 @@ async def test_delete_series_forbidden_member(
 async def test_delete_series_ok_curator_level(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
-    other = await _create_user()
-    project = await _create_project(curator_id=other.user_id)
-    series = await _create_series(project.project_id)
+    other = await create_user()
+    project = await create_project(curator_id=other.user_id)
+    series = await create_series(project.project_id)
 
     async def _cleanup():
         async with TestSession() as s:
@@ -385,10 +277,10 @@ async def test_delete_series_ok_curator_level(
 async def test_delete_series_ok_project_curator(
     client: AsyncClient, request: pytest.FixtureRequest
 ):
-    curator, level = await _create_user_with_level(access_level=1)
-    project = await _create_project(curator_id=curator.user_id)
-    series = await _create_series(project.project_id)
-    headers = await _login_user(client, curator.nickname)
+    curator, level = await create_user_with_level(access_level=1)
+    project = await create_project(curator_id=curator.user_id)
+    series = await create_series(project.project_id)
+    headers = await login_user(client, curator.nickname)
 
     async def _cleanup():
         async with TestSession() as s:
