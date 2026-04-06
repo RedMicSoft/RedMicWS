@@ -37,7 +37,9 @@ def get_series_no_actors(series: Series) -> dict:
 
 async def get_series_participants(series: Series, db: AsyncSession):
     participants = [role.user for role in series.roles]
-    staff = await db.scalars(select(User).where(User.user_id.in_(series.staff_ids)))
+    staff = await db.scalars(
+        select(UserModel).where(UserModel.user_id.in_(series.staff_ids))
+    )
     participants.extend(staff.all())
     res = []
     for participant in participants:
