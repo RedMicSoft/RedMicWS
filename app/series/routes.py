@@ -11,7 +11,7 @@ from fastapi import (
     Depends,
     Query,
 )
-from sqlalchemy import select, null, union_all, literal, false, String
+from sqlalchemy import select, null, union_all, literal, false, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -97,7 +97,7 @@ async def get_user_work(
             literal("актёр").label("work_type"),
             (Role.state == RoleState.MIXING_READY).label("role_is_ready"),
             Role.role_name.label("role_name"),
-            Role.state.label("role_state"),
+            cast(Role.state, String).label("role_state"),
         )
         .join(Series, Role.series_id == Series.id)
         .join(ProjectModel, Series.project_id == ProjectModel.project_id)
