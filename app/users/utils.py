@@ -15,9 +15,6 @@ from .models import User as UserModel
 
 from app.levels.models import UserLevel, Level as LevelModel
 
-from collections.abc import Callable
-from typing import Awaitable
-
 scheduler = AsyncIOScheduler()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ACCESS_TOKEN_EXPIRE_DAYS = 30
@@ -32,12 +29,6 @@ MEMBER_LEVEL = 1
 CURATOR_LEVEL = 2
 ADMIN_LEVEL = 3
 SENIOR_ADMIN_LEVEL = 4
-
-CREDENTIALS_EXCEPTION = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-    headers={"WWW-Authenticate": "Bearer"},
-)
 
 
 def hash_password(password: str) -> str:
@@ -64,16 +55,23 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def authenticate_user(token: str = Depends(oauth2_scheme)) -> str:
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Проверяет JWT запроса и возвращает ID пользователя.
+    Проверяет JWT и возвращает пользователя из базы.
     """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("id")
         if user_id is None:
-            raise CREDENTIALS_EXCEPTION
-        return user_id
+            raise credentials_exception
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -81,20 +79,11 @@ async def authenticate_user(token: str = Depends(oauth2_scheme)) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.PyJWTError:
-        raise CREDENTIALS_EXCEPTION
-
-
-async def get_current_user(
-    user_id: str = Depends(authenticate_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Проверяет JWT и возвращает пользователя из базы.
-    """
+        raise credentials_exception
     result = await db.scalars(select(UserModel).where(UserModel.user_id == user_id))
     user = result.first()
     if user is None:
-        raise CREDENTIALS_EXCEPTION  # Клиент не должен знать, что пользователь не найден
+        raise credentials_exception
     return user
 
 
@@ -119,6 +108,7 @@ class LevelChecker:
         if self._is_access_level_sufficient(user, db):
             return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
 
 at_least_curator = LevelChecker(CURATOR_LEVEL)
 at_least_admin = LevelChecker(ADMIN_LEVEL)

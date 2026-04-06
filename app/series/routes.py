@@ -27,7 +27,7 @@ from app.series.schemas import (
     UserWorkProjectInfo,
     UserWorkRoleInfo,
 )
-from app.users.utils import get_current_user, authenticate_user
+from app.users.utils import get_current_user
 from app.roles.schemas import RoleCreate
 from ..projects.utils import ProjectChecker, AccessChecker
 from ..users import get_max_lvl
