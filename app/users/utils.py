@@ -238,3 +238,15 @@ async def get_id_deleted_user():
         )
 
     return del_user.user_id
+
+
+class UserChecker:
+    async def __call__(
+        self, user_id: int, db: AsyncSession = Depends(get_db)
+    ) -> UserModel:
+        db_user = await db.get(UserModel, user_id)
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
+            )
+        return db_user

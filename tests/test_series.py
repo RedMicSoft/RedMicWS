@@ -201,6 +201,12 @@ async def test_work_staff_role_is_ready_is_false(
         assert item["role_is_ready"] is False
 
 
+@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+async def test_work_user_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.get("/series/user/999999/work", headers=auth_headers)
+    assert response.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # DELETE /series/{seria_id}
 # ---------------------------------------------------------------------------

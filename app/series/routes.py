@@ -27,7 +27,7 @@ from app.series.schemas import (
     UserWorkProjectInfo,
     UserWorkRoleInfo,
 )
-from app.users.utils import get_current_user
+from app.users.utils import UserChecker, get_current_user
 from app.roles.schemas import RoleCreate
 from ..projects.utils import ProjectChecker, AccessChecker
 from ..users import get_max_lvl
@@ -58,9 +58,9 @@ STAFF_FIELD_TO_WORK_TYPE = {
 
 @router.get("/user/{user_id}/work", response_model=list[UserWorkItem])
 async def get_user_work(
-    user_id: int,
+    user: Annotated[UserModel, Depends(UserChecker())],
     db: AsyncSession = Depends(get_db),
-    user: UserModel = Depends(get_current_user),
+    _: UserModel = Depends(get_current_user),
 ):
     staff_subqueries = [
         select(
@@ -76,7 +76,7 @@ async def get_user_work(
             literal(None, type_=String).label("role_state"),
         )
         .join(ProjectModel, Series.project_id == ProjectModel.project_id)
-        .where(getattr(Series, field) == user_id)
+        .where(getattr(Series, field) == user.user_id)
         for field, work_type in STAFF_FIELD_TO_WORK_TYPE.items()
     ]
 
@@ -97,7 +97,7 @@ async def get_user_work(
         )
         .join(Series, Role.series_id == Series.id)
         .join(ProjectModel, Series.project_id == ProjectModel.project_id)
-        .where(Role.user_id == user_id)
+        .where(Role.user_id == user.user_id)
     )
 
     rows = (await db.execute(union_all(*staff_subqueries, actor_subquery))).all()
