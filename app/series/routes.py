@@ -26,6 +26,8 @@ from app.series.schemas import (
     UserWorkSeriaInfo,
     UserWorkProjectInfo,
     UserWorkRoleInfo,
+    SeriesDataUpdate,
+    SeriesDataResponse,
 )
 from app.users.utils import UserChecker, get_current_user
 from app.roles.schemas import RoleCreate
@@ -38,6 +40,7 @@ from .utils import (
     get_series_participants,
     get_series_no_actors,
     SeriesAccessChecker,
+    SeriesDataAccessChecker,
 )
 from .models import Series
 from app.projects.models import Project as ProjectModel
@@ -229,6 +232,41 @@ async def get_series_by_id(
         )
 
     db_series = await db.scalar()
+
+
+@router.patch("/{seria_id}/data", response_model=SeriesDataResponse)
+async def update_series_data(
+    data: SeriesDataUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesDataAccessChecker())],
+):
+    if data.seria_title is not None:
+        db_seria.title = data.seria_title
+    if data.start_date is not None:
+        db_seria.start_date = data.start_date
+    if data.first_stage_date is not None:
+        db_seria.first_deadline = data.first_stage_date
+    if data.second_stage_date is not None:
+        db_seria.second_deadline = data.second_stage_date
+    if data.publication_date is not None:
+        db_seria.exp_publish_date = data.publication_date
+    if data.note is not None:
+        db_seria.note = data.note
+    if data.state is not None:
+        db_seria.state = data.state
+
+    await db.commit()
+    await db.refresh(db_seria)
+
+    return SeriesDataResponse(
+        seria_title=db_seria.title,
+        start_date=db_seria.start_date,
+        first_stage_date=db_seria.first_deadline,
+        second_stage_date=db_seria.second_deadline,
+        publication_date=db_seria.exp_publish_date,
+        note=db_seria.note,
+        state=db_seria.state,
+    )
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

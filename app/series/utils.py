@@ -7,7 +7,7 @@ from app.database import get_db
 from app.projects.models import Project as ProjectModel
 from app.projects.utils import AccessChecker
 from app.users.models import User as UserModel
-from app.users.utils import get_current_user
+from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
 from .models import Series
@@ -107,4 +107,23 @@ class SeriesAccessChecker:
             raise HTTPException(status_code=404, detail="Проект не найден.")
 
         await AccessChecker()(user=user, db_project=db_project, db=db)
+        return db_seria
+
+
+class SeriesDataAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_seria: Series = Depends(SeriesChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if user_level < CURATOR_LEVEL and user.user_id not in db_seria.staff_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
+            )
         return db_seria

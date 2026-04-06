@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, date
 from ..users.schemas import UserResponse
 from sqlalchemy import null, Null
+from .models import SeriesState
 
 
 class SeriesParticipant(BaseModel):
@@ -90,6 +91,42 @@ class UserWorkItem(BaseModel):
     role_is_ready: bool
     subs: bool
     role: UserWorkRoleInfo | None
+
+
+class SeriesDataUpdate(BaseModel):
+    seria_title: Optional[str] = None
+    start_date: Optional[date] = None
+    first_stage_date: Optional[date] = None
+    second_stage_date: Optional[date] = None
+    publication_date: Optional[date] = None
+    note: Optional[str] = None
+    state: Optional[SeriesState] = None
+
+    @field_validator(
+        "start_date",
+        "first_stage_date",
+        "second_stage_date",
+        "publication_date",
+        mode="before",
+    )
+    @classmethod
+    def parse_date(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return datetime.strptime(v, "%d.%m.%y").date()
+            except ValueError:
+                raise ValueError("Дата должна быть в формате ДД.ММ.ГГ")
+        return v
+
+
+class SeriesDataResponse(BaseModel):
+    seria_title: str
+    start_date: date
+    first_stage_date: date
+    second_stage_date: date
+    publication_date: date
+    note: str | None
+    state: str
 
 
 class SeriesMaterialsResponse(BaseModel):

@@ -6,6 +6,7 @@ from tests.helpers.projects import create_project
 from tests.helpers.series import create_series, STAFF_WORK_TYPES
 from tests.helpers.roles import create_role
 from app.roles.models import RoleState
+from app.series.models import SeriesState
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
@@ -257,3 +258,238 @@ async def test_delete_series_ok_project_curator(
 
     response = await client.delete(f"/series/{series.id}", headers=headers)
     assert response.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# PATCH /series/{seria_id}/data
+# ---------------------------------------------------------------------------
+
+
+async def test_update_series_data_no_auth(client: AsyncClient):
+    response = await client.patch("/series/999999/data", json={})
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.patch("/series/999999/data", json={}, headers=auth_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+async def test_update_series_data_forbidden_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, не входящий в состав серии, получает 403."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data", json={}, headers=auth_headers
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_ok_full(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор (уровень 2) обновляет все поля сразу."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    payload = {
+        "seria_title": "Обновлённое название",
+        "start_date": "01.03.25",
+        "first_stage_date": "02.03.25",
+        "second_stage_date": "03.03.25",
+        "publication_date": "04.03.25",
+        "note": "Примечание к серии",
+        "state": SeriesState.MIXING.value,
+    }
+    response = await client.patch(
+        f"/series/{series.id}/data", json=payload, headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["seria_title"] == "Обновлённое название"
+    assert data["start_date"] == "2025-03-01"
+    assert data["first_stage_date"] == "2025-03-02"
+    assert data["second_stage_date"] == "2025-03-03"
+    assert data["publication_date"] == "2025-03-04"
+    assert data["note"] == "Примечание к серии"
+    assert data["state"] == SeriesState.MIXING.value
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_ok_partial(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Частичное обновление: изменяется только note, остальные поля не трогаются."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, note="старое")
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"note": "новое"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["note"] == "новое"
+    assert data["seria_title"] == series.title  # не изменился
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_ok_empty_body(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пустое тело — значения серии остаются прежними, ответ содержит все поля."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, state=SeriesState.VOICE_OVER
+    )
+
+    response = await client.patch(
+        f"/series/{series.id}/data", json={}, headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["seria_title"] == series.title
+    assert data["state"] == SeriesState.VOICE_OVER.value
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит ровно те поля, что описаны в контракте."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data", json={}, headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert set(response.json().keys()) == {
+        "seria_title",
+        "start_date",
+        "first_stage_date",
+        "second_stage_date",
+        "publication_date",
+        "note",
+        "state",
+    }
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "timer",
+        "translator",
+        "director",
+    ],
+)
+async def test_update_series_data_ok_as_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, назначенный на любую должность серии, может изменить данные."""
+    staff_user, _ = await create_user_with_level(access_level=1, request=request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_user.user_id}
+    )
+    headers = await login_user(client, staff_user.nickname)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"note": f"изменено через {staff_field}"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["note"] == f"изменено через {staff_field}"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_invalid_date_iso_format(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """ISO-формат даты (ГГГГ-ММ-ДД) не принимается — ожидается ДД.ММ.ГГ."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"start_date": "2025-01-15"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_invalid_date_nonsense(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Произвольная строка вместо даты возвращает 422."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"first_stage_date": "не дата"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_invalid_state(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Значение state, не входящее в SeriesState, возвращает 422."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"state": "несуществующий_статус"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "state",
+    [s.value for s in SeriesState],
+)
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_update_series_data_all_valid_states(
+    state: str,
+    auth_headers: dict,
+    client: AsyncClient,
+    request: pytest.FixtureRequest,
+):
+    """Каждое допустимое значение SeriesState принимается без ошибок."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"state": state},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["state"] == state
