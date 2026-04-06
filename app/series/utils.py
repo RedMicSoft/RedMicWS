@@ -47,9 +47,10 @@ async def get_series_participants(series: Series, db: AsyncSession):
             continue
         res.append(
             SeriesParticipant(
-                id=participant.user_id,
+                user_id=participant.user_id,
                 nickname=participant.nickname,
                 avatar_url=participant.avatar_url,
+                is_active=participant.is_active,
             )
         )
     return res
