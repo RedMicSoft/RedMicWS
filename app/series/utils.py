@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from pathlib import Path
 
@@ -36,7 +38,7 @@ def get_series_no_actors(series: Series) -> dict:
 
 
 async def get_series_participants(series: Series, db: AsyncSession):
-    participants = [role.user for role in series.roles]
+    participants = [cast(UserModel, cast(Role, role).user) for role in series.roles]
     staff = await db.scalars(
         select(UserModel).where(UserModel.user_id.in_(series.staff_ids))
     )
