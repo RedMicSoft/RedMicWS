@@ -95,7 +95,7 @@ class SeriesChecker:
         return db_seria
 
 
-class SeriesDeleteAccessChecker:
+class SeriesAccessChecker:
     async def __call__(
         self,
         user: UserModel = Depends(get_current_user),
