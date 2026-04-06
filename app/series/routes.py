@@ -56,11 +56,14 @@ STAFF_FIELD_TO_WORK_TYPE = {
 }
 
 
-@router.get("/user/{user_id}/work", response_model=list[UserWorkItem])
+@router.get(
+    "/user/{user_id}/work",
+    response_model=list[UserWorkItem],
+    dependencies=[Depends(get_current_user)],
+)
 async def get_user_work(
     user: Annotated[UserModel, Depends(UserChecker())],
     db: AsyncSession = Depends(get_db),
-    _: UserModel = Depends(get_current_user),
 ):
     staff_subqueries = [
         select(
