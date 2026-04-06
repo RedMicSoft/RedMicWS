@@ -100,6 +100,22 @@ async def auth_headers(
         session.add(UserLevel(level_id=level.level_id, user_id=user.user_id))
         await session.commit()
 
+        user_id = user.user_id
+        level_id = level.level_id
+
+    async def _cleanup() -> None:
+        async with TestSession() as session:
+            db_user = await session.get(User, user_id)
+            if db_user:
+                await session.delete(db_user)
+            await session.commit()
+            db_level = await session.get(Level, level_id)
+            if db_level:
+                await session.delete(db_level)
+            await session.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+
     response = await client.post(
         "/users/login",
         data={"username": nickname, "password": "test_pass"},

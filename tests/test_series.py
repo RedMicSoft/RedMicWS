@@ -1,15 +1,10 @@
-import asyncio
 import pytest
 from httpx import AsyncClient
 
-from tests.conftest import TestSession
 from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series, STAFF_WORK_TYPES
 from tests.helpers.roles import create_role
-from app.levels.models import Level
-from app.users.models import User
-from app.projects.models import Project
 from app.roles.models import RoleState
 
 
@@ -26,11 +21,14 @@ async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncCl
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_all_positions_and_roles(auth_headers: dict, client: AsyncClient):
-    worker = await create_user()
-    project = await create_project(curator_id=worker.user_id)
+async def test_work_all_positions_and_roles(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    worker = await create_user(request)
+    project = await create_project(curator_id=worker.user_id, request=request)
     series = await create_series(
         project.project_id,
+        request,
         curator=worker.user_id,
         sound_engineer=worker.user_id,
         raw_sound_engineer=worker.user_id,
@@ -38,8 +36,8 @@ async def test_work_all_positions_and_roles(auth_headers: dict, client: AsyncCli
         translator=worker.user_id,
         director=worker.user_id,
     )
-    await create_role(series.id, worker.user_id)
-    await create_role(series.id, worker.user_id)
+    await create_role(series.id, worker.user_id, request)
+    await create_role(series.id, worker.user_id, request)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -71,16 +69,18 @@ async def test_work_all_positions_and_roles(auth_headers: dict, client: AsyncCli
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_across_two_projects(auth_headers: dict, client: AsyncClient):
-    worker = await create_user()
-    other = await create_user()
+async def test_work_across_two_projects(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    worker = await create_user(request)
+    other = await create_user(request)
 
-    project1 = await create_project(curator_id=other.user_id)
-    series1 = await create_series(project1.project_id)
-    await create_role(series1.id, worker.user_id)
+    project1 = await create_project(curator_id=other.user_id, request=request)
+    series1 = await create_series(project1.project_id, request)
+    await create_role(series1.id, worker.user_id, request)
 
-    project2 = await create_project(curator_id=other.user_id)
-    series2 = await create_series(project2.project_id, curator=worker.user_id)
+    project2 = await create_project(curator_id=other.user_id, request=request)
+    series2 = await create_series(project2.project_id, request, curator=worker.user_id)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -108,8 +108,10 @@ async def test_work_across_two_projects(auth_headers: dict, client: AsyncClient)
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_empty_when_no_assignments(auth_headers: dict, client: AsyncClient):
-    worker = await create_user()
+async def test_work_empty_when_no_assignments(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    worker = await create_user(request)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -135,15 +137,17 @@ async def test_work_requires_auth(client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_role_is_ready_flag(auth_headers: dict, client: AsyncClient):
+async def test_work_role_is_ready_flag(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
     """role_is_ready=True только у роли в состоянии MIXING_READY."""
-    worker = await create_user()
-    other = await create_user()
-    project = await create_project(curator_id=other.user_id)
-    series = await create_series(project.project_id)
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
 
-    await create_role(series.id, worker.user_id, state=RoleState.MIXING_READY)
-    await create_role(series.id, worker.user_id, state=RoleState.NOT_LOADED)
+    await create_role(series.id, worker.user_id, request, state=RoleState.MIXING_READY)
+    await create_role(series.id, worker.user_id, request, state=RoleState.NOT_LOADED)
 
     response = await client.get(
         f"/series/user/{worker.user_id}/work", headers=auth_headers
@@ -161,19 +165,23 @@ async def test_work_role_is_ready_flag(auth_headers: dict, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_subs_flag(auth_headers: dict, client: AsyncClient):
+async def test_work_subs_flag(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
     """subs=True если у серии задан ass_url, иначе False."""
-    worker = await create_user()
-    other = await create_user()
-    project = await create_project(curator_id=other.user_id)
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
 
     series_with_ass = await create_series(
         project.project_id,
+        request,
         curator=worker.user_id,
         ass_url="/media/subs/test.ass",
     )
     series_without_ass = await create_series(
         project.project_id,
+        request,
         sound_engineer=worker.user_id,
         ass_url=None,
     )
@@ -191,12 +199,15 @@ async def test_work_subs_flag(auth_headers: dict, client: AsyncClient):
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
-async def test_work_staff_role_is_ready_is_false(auth_headers: dict, client: AsyncClient):
+async def test_work_staff_role_is_ready_is_false(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
     """Для всех должностей (не актёр) role_is_ready всегда False."""
-    worker = await create_user()
-    project = await create_project(curator_id=worker.user_id)
+    worker = await create_user(request)
+    project = await create_project(curator_id=worker.user_id, request=request)
     await create_series(
         project.project_id,
+        request,
         curator=worker.user_id,
         sound_engineer=worker.user_id,
     )
@@ -230,21 +241,9 @@ async def test_delete_series_not_found(auth_headers: dict, client: AsyncClient):
 async def test_delete_series_forbidden_member(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
-    other = await create_user()
-    project = await create_project(curator_id=other.user_id)
-    series = await create_series(project.project_id)
-
-    async def _cleanup():
-        async with TestSession() as s:
-            db_project = await s.get(Project, project.project_id)
-            if db_project:
-                await s.delete(db_project)
-            db_user = await s.get(User, other.user_id)
-            if db_user:
-                await s.delete(db_user)
-            await s.commit()
-
-    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
 
     response = await client.delete(f"/series/{series.id}", headers=auth_headers)
     assert response.status_code == 403
@@ -254,21 +253,9 @@ async def test_delete_series_forbidden_member(
 async def test_delete_series_ok_curator_level(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
-    other = await create_user()
-    project = await create_project(curator_id=other.user_id)
-    series = await create_series(project.project_id)
-
-    async def _cleanup():
-        async with TestSession() as s:
-            db_project = await s.get(Project, project.project_id)
-            if db_project:
-                await s.delete(db_project)
-            db_user = await s.get(User, other.user_id)
-            if db_user:
-                await s.delete(db_user)
-            await s.commit()
-
-    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
 
     response = await client.delete(f"/series/{series.id}", headers=auth_headers)
     assert response.status_code == 204
@@ -277,25 +264,10 @@ async def test_delete_series_ok_curator_level(
 async def test_delete_series_ok_project_curator(
     client: AsyncClient, request: pytest.FixtureRequest
 ):
-    curator, level = await create_user_with_level(access_level=1)
-    project = await create_project(curator_id=curator.user_id)
-    series = await create_series(project.project_id)
+    curator, level = await create_user_with_level(access_level=1, request=request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
     headers = await login_user(client, curator.nickname)
-
-    async def _cleanup():
-        async with TestSession() as s:
-            db_project = await s.get(Project, project.project_id)
-            if db_project:
-                await s.delete(db_project)
-            db_user = await s.get(User, curator.user_id)
-            if db_user:
-                await s.delete(db_user)
-            db_level = await s.get(Level, level.level_id)
-            if db_level:
-                await s.delete(db_level)
-            await s.commit()
-
-    request.addfinalizer(lambda: asyncio.run(_cleanup()))
 
     response = await client.delete(f"/series/{series.id}", headers=headers)
     assert response.status_code == 204

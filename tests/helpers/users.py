@@ -1,5 +1,7 @@
+import asyncio
 from datetime import date
 
+import pytest
 from httpx import AsyncClient
 
 from tests.conftest import TestSession
@@ -9,7 +11,7 @@ from app.users.models import User
 from app.users.utils import hash_password
 
 
-async def create_user() -> User:
+async def create_user(request: pytest.FixtureRequest | None = None) -> User:
     async with TestSession() as s:
         user = User(
             nickname=f"worker_{_uid()}",
@@ -19,10 +21,26 @@ async def create_user() -> User:
         s.add(user)
         await s.commit()
         await s.refresh(user)
-        return user
+
+    if request is not None:
+        user_id = user.user_id
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_user = await s.get(User, user_id)
+                if db_user:
+                    await s.delete(db_user)
+                await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return user
 
 
-async def create_user_with_level(access_level: int) -> tuple[User, Level]:
+async def create_user_with_level(
+    access_level: int,
+    request: pytest.FixtureRequest | None = None,
+) -> tuple[User, Level]:
     async with TestSession() as s:
         level = Level(role_name=f"role_{_uid()}", access_level=access_level, is_active=True)
         s.add(level)
@@ -38,7 +56,25 @@ async def create_user_with_level(access_level: int) -> tuple[User, Level]:
         await s.commit()
         await s.refresh(user)
         await s.refresh(level)
-        return user, level
+
+    if request is not None:
+        user_id = user.user_id
+        level_id = level.level_id
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_user = await s.get(User, user_id)
+                if db_user:
+                    await s.delete(db_user)
+                await s.commit()
+                db_level = await s.get(Level, level_id)
+                if db_level:
+                    await s.delete(db_level)
+                await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return user, level
 
 
 async def login_user(client: AsyncClient, nickname: str, password: str = "x") -> dict:
