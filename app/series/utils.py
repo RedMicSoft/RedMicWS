@@ -3,7 +3,11 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.users.models import User
+from app.database import get_db
+from app.projects.models import Project as ProjectModel
+from app.projects.utils import AccessChecker
+from app.users.models import User as UserModel
+from app.users.utils import get_current_user
 
 from .schemas import SeriesParticipant
 from .models import Series
@@ -77,3 +81,30 @@ def compute_dub_progress(roles: list[Role]):
         return "finished"
     else:
         return "on_process"
+
+
+class SeriesChecker:
+    async def __call__(
+        self, seria_id: int, db: AsyncSession = Depends(get_db)
+    ) -> Series:
+        db_seria = await db.get(Series, seria_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+        return db_seria
+
+
+class SeriesDeleteAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_seria: Series = Depends(SeriesChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if not db_project:
+            raise HTTPException(status_code=404, detail="Проект не найден.")
+
+        await AccessChecker()(user=user, db_project=db_project, db=db)
+        return db_seria

@@ -1,9 +1,11 @@
+import asyncio
 import uuid
 import pytest
 from datetime import date
 from httpx import AsyncClient
 
 from tests.conftest import TestSession
+from app.levels.models import Level, UserLevel
 from app.users.models import User
 from app.users.utils import hash_password
 from app.projects.models import Project
@@ -289,3 +291,119 @@ async def test_work_staff_role_is_ready_is_false(auth_headers, client: AsyncClie
     assert response.status_code == 200
     for item in response.json():
         assert item["role_is_ready"] is False
+
+
+# ---------------------------------------------------------------------------
+# DELETE /series/{seria_id}
+# ---------------------------------------------------------------------------
+
+
+async def _create_user_with_level(access_level: int) -> tuple[User, Level]:
+    async with TestSession() as s:
+        level = Level(role_name=f"role_{_uid()}", access_level=access_level, is_active=True)
+        s.add(level)
+        await s.flush()
+        user = User(
+            nickname=f"u_{_uid()}",
+            hashed_password=hash_password("x"),
+            join_date=date.today(),
+        )
+        s.add(user)
+        await s.flush()
+        s.add(UserLevel(level_id=level.level_id, user_id=user.user_id))
+        await s.commit()
+        await s.refresh(user)
+        await s.refresh(level)
+        return user, level
+
+
+async def _login_user(client: AsyncClient, nickname: str, password: str = "x") -> dict:
+    response = await client.post("/users/login", data={"username": nickname, "password": password})
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def test_delete_series_no_auth(client: AsyncClient):
+    response = await client.delete("/series/999999")
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+async def test_delete_series_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.delete("/series/999999", headers=auth_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
+async def test_delete_series_forbidden_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    other = await _create_user()
+    project = await _create_project(curator_id=other.user_id)
+    series = await _create_series(project.project_id)
+
+    async def _cleanup():
+        async with TestSession() as s:
+            db_project = await s.get(Project, project.project_id)
+            if db_project:
+                await s.delete(db_project)
+            db_user = await s.get(User, other.user_id)
+            if db_user:
+                await s.delete(db_user)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+
+    response = await client.delete(f"/series/{series.id}", headers=auth_headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": 2}], indirect=True)
+async def test_delete_series_ok_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    other = await _create_user()
+    project = await _create_project(curator_id=other.user_id)
+    series = await _create_series(project.project_id)
+
+    async def _cleanup():
+        async with TestSession() as s:
+            db_project = await s.get(Project, project.project_id)
+            if db_project:
+                await s.delete(db_project)
+            db_user = await s.get(User, other.user_id)
+            if db_user:
+                await s.delete(db_user)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+
+    response = await client.delete(f"/series/{series.id}", headers=auth_headers)
+    assert response.status_code == 204
+
+
+async def test_delete_series_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    curator, level = await _create_user_with_level(access_level=1)
+    project = await _create_project(curator_id=curator.user_id)
+    series = await _create_series(project.project_id)
+    headers = await _login_user(client, curator.nickname)
+
+    async def _cleanup():
+        async with TestSession() as s:
+            db_project = await s.get(Project, project.project_id)
+            if db_project:
+                await s.delete(db_project)
+            db_user = await s.get(User, curator.user_id)
+            if db_user:
+                await s.delete(db_user)
+            db_level = await s.get(Level, level.level_id)
+            if db_level:
+                await s.delete(db_level)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_cleanup()))
+
+    response = await client.delete(f"/series/{series.id}", headers=headers)
+    assert response.status_code == 204

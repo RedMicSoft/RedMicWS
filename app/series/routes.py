@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import (
     APIRouter,
@@ -37,6 +37,7 @@ from .utils import (
     compute_dub_progress,
     get_series_participants,
     get_series_no_actors,
+    SeriesDeleteAccessChecker,
 )
 from .models import Series
 from app.projects.models import Project as ProjectModel
@@ -227,3 +228,12 @@ async def get_series_by_id(
         )
 
     db_series = await db.scalar()
+
+
+@router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_series(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesDeleteAccessChecker())],
+):
+    await db.delete(db_seria)
+    await db.commit()
