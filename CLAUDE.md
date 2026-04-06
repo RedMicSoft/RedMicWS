@@ -76,6 +76,11 @@ Each module under `app/` follows the same pattern: `models.py` (SQLAlchemy ORM),
 - `client` — `httpx.AsyncClient` с `ASGITransport`; переопределяет `get_db` на тестовую SQLite сессию.
 - `auth_headers` — параметризованный фикстур; создаёт пользователя нужного уровня доступа напрямую в БД и возвращает `{"Authorization": "Bearer ..."}`.
 
+**DB cleanliness rules:**
+- Tests must leave no traces in the DB — every entity created in a test must be deleted after.
+- Helper functions for creating entities (projects, series, roles, etc.) belong in `conftest.py` or dedicated fixture files, not inline in test functions.
+- Use `request.addfinalizer` to register cleanup (DELETE) callbacks so entities are removed even if the test fails.
+
 **`auth_headers` usage** (requires `@pytest.mark.parametrize` indirect):
 ```python
 @pytest.mark.parametrize("auth_headers", [{"level": 1}], indirect=True)
