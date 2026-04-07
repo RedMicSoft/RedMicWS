@@ -48,8 +48,8 @@ async def _cleanup_series_link(link_id: int) -> None:
 @pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
 async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncClient):
     response = await client.get("/series/", headers=auth_headers)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "В данном проекте ещё нет серий."}
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
 
 
 # ---------------------------------------------------------------------------
