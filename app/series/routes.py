@@ -148,11 +148,6 @@ async def get_series(
     )
     db_series = await db.scalars(db_series)
     db_series = db_series.all()
-    if not db_series:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="В данном проекте ещё нет серий.",
-        )
 
     return [
         {
