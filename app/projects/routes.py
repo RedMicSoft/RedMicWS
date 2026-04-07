@@ -121,7 +121,7 @@ async def create_project(
     type принимает только "закадр", "рекаст", "дубляж"\n
     status принимает только "подготовка", "в работе", "завершён", "приостановлен", "закрыт"\n
     """
-    if not await get_max_lvl(project, user) >= 2:
+    if not await get_max_lvl(db, user) >= 2:
         raise HTTPException(status_code=403)
     new_project = ProjectModel(**project.model_dump())
 
