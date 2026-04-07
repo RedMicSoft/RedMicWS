@@ -115,6 +115,35 @@ class SeriesAccessChecker:
         return db_seria
 
 
+class SeriesNoActorsAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_seria: Series = Depends(SeriesChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        project_curator_id = None
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if db_project:
+            project_curator_id = db_project.curator_id
+
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if (
+            user_level < CURATOR_LEVEL
+            and user.user_id != db_seria.curator
+            and user.user_id != project_curator_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
+            )
+
+        return db_seria
+
+
 class SeriesDataAccessChecker:
     async def __call__(
         self,

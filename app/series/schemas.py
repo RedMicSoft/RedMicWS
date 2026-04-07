@@ -93,6 +93,24 @@ class UserWorkItem(BaseModel):
     role: UserWorkRoleInfo | None
 
 
+class SeriesNoActorsUpdate(BaseModel):
+    curator: int | None = None
+    sound_engineer: int | None = None
+    raw_sound_engineer: int | None = None
+    director: int | None = None
+    timer: int | None = None
+    subtitler: int | None = None
+
+
+class SeriesNoActorsResponse(BaseModel):
+    curator: SeriesParticipant | None
+    sound_engineer: SeriesParticipant | None
+    raw_sound_engineer: SeriesParticipant | None
+    director: SeriesParticipant | None
+    timer: SeriesParticipant | None
+    subtitler: SeriesParticipant | None
+
+
 class SeriesDataUpdate(BaseModel):
     seria_title: Optional[str] = None
     start_date: Optional[date] = None

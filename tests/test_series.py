@@ -460,6 +460,263 @@ async def test_update_series_data_invalid_date_nonsense(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+# ---------------------------------------------------------------------------
+# PATCH /series/{seria_id}/noactors
+# ---------------------------------------------------------------------------
+
+NOACTORS_KEYS = {"curator", "sound_engineer", "raw_sound_engineer", "director", "timer", "subtitler"}
+PARTICIPANT_KEYS = {"user_id", "nickname", "avatar_url", "is_active"}
+
+
+async def test_update_noactors_no_auth(client: AsyncClient):
+    response = await client.patch("/series/999999/noactors", json={})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.patch("/series/999999/noactors", json={}, headers=auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_update_noactors_forbidden_plain_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, не являющийся куратором серии или проекта, получает 403."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, curator=other.user_id)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_ok_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня 2 имеет доступ без привязки к серии."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_update_noactors_ok_series_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор серии (уровень 1) имеет доступ к ручке."""
+    series_curator, _ = await create_user_with_level(access_level=MEMBER_LEVEL, request=request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, curator=series_curator.user_id)
+    headers = await login_user(client, series_curator.nickname)
+
+    response = await client.patch(f"/series/{series.id}/noactors", json={}, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_update_noactors_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) имеет доступ к ручке."""
+    project_curator, _ = await create_user_with_level(access_level=MEMBER_LEVEL, request=request)
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.patch(f"/series/{series.id}/noactors", json={}, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит ровно 6 ключей, каждый — объект участника или null."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert set(data.keys()) == NOACTORS_KEYS
+    for value in data.values():
+        if value is not None:
+            assert set(value.keys()) == PARTICIPANT_KEYS
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_empty_body_no_changes(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пустое тело не изменяет участников серии."""
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, curator=worker.user_id)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["curator"] is not None
+    assert data["curator"]["user_id"] == worker.user_id
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_all_fields(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Обновление всех 6 полей одновременно."""
+    u1 = await create_user(request)
+    u2 = await create_user(request)
+    u3 = await create_user(request)
+    u4 = await create_user(request)
+    u5 = await create_user(request)
+    u6 = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    payload = {
+        "curator": u1.user_id,
+        "sound_engineer": u2.user_id,
+        "raw_sound_engineer": u3.user_id,
+        "director": u4.user_id,
+        "timer": u5.user_id,
+        "subtitler": u6.user_id,
+    }
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json=payload, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["curator"]["user_id"] == u1.user_id
+    assert data["sound_engineer"]["user_id"] == u2.user_id
+    assert data["raw_sound_engineer"]["user_id"] == u3.user_id
+    assert data["director"]["user_id"] == u4.user_id
+    assert data["timer"]["user_id"] == u5.user_id
+    assert data["subtitler"]["user_id"] == u6.user_id
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_partial_fields(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Обновление части полей не затрагивает остальные."""
+    worker = await create_user(request)
+    new_engineer = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, curator=worker.user_id, sound_engineer=worker.user_id
+    )
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"sound_engineer": new_engineer.user_id},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["sound_engineer"]["user_id"] == new_engineer.user_id
+    assert data["curator"]["user_id"] == worker.user_id  # не изменился
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_set_field_to_null(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Явная передача null очищает поле."""
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, sound_engineer=worker.user_id)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"sound_engineer": None},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["sound_engineer"] is None
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_null_not_same_as_absent(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """null очищает поле, а отсутствие поля в теле — нет."""
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id,
+        request,
+        curator=worker.user_id,
+        sound_engineer=worker.user_id,
+    )
+
+    # curator отсутствует → не меняется; sound_engineer=null → очищается
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"sound_engineer": None},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["curator"]["user_id"] == worker.user_id
+    assert data["sound_engineer"] is None
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_subtitler_maps_to_translator(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Поле subtitler в запросе соответствует полю translator в БД."""
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    # translator= — имя поля в модели Series
+    series = await create_series(project.project_id, request, translator=worker.user_id)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["subtitler"]["user_id"] == worker.user_id
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_unassigned_fields_are_null(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Поля без назначенного пользователя возвращаются как null."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)  # все поля = None
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    for key in NOACTORS_KEYS:
+        assert data[key] is None
+
+
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_invalid_state(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest

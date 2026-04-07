@@ -28,6 +28,8 @@ from app.series.schemas import (
     UserWorkRoleInfo,
     SeriesDataUpdate,
     SeriesDataResponse,
+    SeriesNoActorsUpdate,
+    SeriesNoActorsResponse,
 )
 from app.users.utils import UserChecker, get_current_user
 from app.roles.schemas import RoleCreate
@@ -41,6 +43,7 @@ from .utils import (
     get_series_no_actors,
     SeriesAccessChecker,
     SeriesDataAccessChecker,
+    SeriesNoActorsAccessChecker,
 )
 from .models import Series
 from app.projects.models import Project as ProjectModel
@@ -232,6 +235,63 @@ async def get_series_by_id(
         )
 
     db_series = await db.scalar()
+
+
+@router.patch("/{seria_id}/noactors", response_model=SeriesNoActorsResponse)
+async def update_series_no_actors(
+    data: SeriesNoActorsUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesNoActorsAccessChecker())],
+):
+    request_to_model = {
+        "curator": "curator",
+        "sound_engineer": "sound_engineer",
+        "raw_sound_engineer": "raw_sound_engineer",
+        "director": "director",
+        "timer": "timer",
+        "subtitler": "translator",
+    }
+
+    for request_field, model_field in request_to_model.items():
+        if request_field in data.model_fields_set:
+            setattr(db_seria, model_field, getattr(data, request_field))
+
+    await db.commit()
+    await db.refresh(db_seria)
+
+    field_map = {
+        "curator": db_seria.curator,
+        "sound_engineer": db_seria.sound_engineer,
+        "raw_sound_engineer": db_seria.raw_sound_engineer,
+        "director": db_seria.director,
+        "timer": db_seria.timer,
+        "subtitler": db_seria.translator,
+    }
+
+    user_ids = {uid for uid in field_map.values() if uid is not None}
+    users: dict[int, UserModel] = {}
+    if user_ids:
+        result = await db.scalars(
+            select(UserModel).where(UserModel.user_id.in_(user_ids))
+        )
+        for u in result.all():
+            users[u.user_id] = u
+
+    return SeriesNoActorsResponse(
+        **{
+            field: (
+                SeriesParticipant(
+                    user_id=u.user_id,
+                    nickname=u.nickname,
+                    avatar_url=u.avatar_url,
+                    is_active=u.is_active,
+                )
+                if uid is not None and (u := users.get(uid)) is not None
+                else None
+            )
+            for field, uid in field_map.items()
+        }
+    )
 
 
 @router.patch("/{seria_id}/data", response_model=SeriesDataResponse)
