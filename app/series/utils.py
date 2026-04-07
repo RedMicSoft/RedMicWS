@@ -12,7 +12,7 @@ from app.users.models import User as UserModel
 from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
-from .models import Series, Material
+from .models import Series, Material, SeriesLink
 from ..roles.models import Role
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -161,6 +161,36 @@ class SeriesDataAccessChecker:
                 status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
             )
         return db_seria
+
+
+class LinkChecker:
+    async def __call__(
+        self, link_id: int, db: AsyncSession = Depends(get_db)
+    ) -> SeriesLink:
+        db_link = await db.get(SeriesLink, link_id)
+        if not db_link:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка не найдена."
+            )
+        return db_link
+
+
+class LinkAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_link: SeriesLink = Depends(LinkChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> SeriesLink:
+        db_seria = await db.get(Series, db_link.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        await SeriesDataAccessChecker()(user=user, db_seria=db_seria, db=db)
+
+        return db_link
 
 
 class MaterialChecker:

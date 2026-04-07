@@ -41,6 +41,7 @@ from ..users import get_max_lvl
 from ..users.models import User as UserModel
 from .utils import (
     MaterialAccessChecker,
+    LinkAccessChecker,
     save_srt,
     compute_dub_progress,
     get_series_participants,
@@ -384,6 +385,21 @@ async def create_series_link(
     await db.commit()
     await db.refresh(db_link)
     return db_link
+
+
+@router.delete(
+    "/links/{link_id}",
+    response_model=str,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_series_link(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_link: Annotated[SeriesLink, Depends(LinkAccessChecker())],
+) -> str:
+    await db.delete(db_link)
+    await db.commit()
+
+    return "Ссылка успешно удалена"
 
 
 @router.delete(
