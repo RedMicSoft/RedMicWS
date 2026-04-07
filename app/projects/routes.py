@@ -113,7 +113,6 @@ async def create_project(
     project: ProjectCreate = Depends(ProjectCreate.as_form),
     db: AsyncSession = Depends(get_db),
     user: UserModel = Depends(get_current_user),
-    check_access=Depends(AccessChecker()),
 ):
     """
     Создаёт новый проект.\n
@@ -122,6 +121,8 @@ async def create_project(
     type принимает только "закадр", "рекаст", "дубляж"\n
     status принимает только "подготовка", "в работе", "завершён", "приостановлен", "закрыт"\n
     """
+    if not await get_max_lvl(project, user) >= 2:
+        raise HTTPException(status_code=403)
     new_project = ProjectModel(**project.model_dump())
 
     if image:
@@ -316,7 +317,7 @@ async def delete_project_link(
 
     await db.delete(db_link)
     await db.commit()
-    #await db.refresh(db_link)
+    # await db.refresh(db_link)
 
     upd_project = await get_db_project(project_id, db)
     return upd_project
