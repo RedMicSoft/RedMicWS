@@ -10,7 +10,12 @@ from fastapi import status
 from tests.conftest import TestSession
 from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project
-from tests.helpers.series import create_series, create_material, STAFF_WORK_TYPES
+from tests.helpers.series import (
+    create_series,
+    create_material,
+    create_series_link,
+    STAFF_WORK_TYPES,
+)
 from tests.helpers.roles import create_role
 from app.files.models import FileModel
 from app.roles.models import RoleState
@@ -27,6 +32,16 @@ async def _cleanup_material_file(material_link: str) -> None:
         db_file = await s.scalar(select(FileModel).where(FileModel.file_url == material_link))
         if db_file:
             await s.delete(db_file)
+            await s.commit()
+
+
+async def _cleanup_series_link(link_id: int) -> None:
+    from app.series.models import SeriesLink
+
+    async with TestSession() as s:
+        db_link = await s.get(SeriesLink, link_id)
+        if db_link:
+            await s.delete(db_link)
             await s.commit()
 
 
@@ -987,3 +1002,132 @@ async def test_delete_material_ok_as_staff_member(
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "Материал успешно удалён"
+
+
+# ---------------------------------------------------------------------------
+# POST /series/{seria_id}/links
+# ---------------------------------------------------------------------------
+
+
+async def test_create_series_link_no_auth(client: AsyncClient):
+    response = await client.post(
+        "/series/999999/links",
+        json={"link_url": "https://example.com", "link_title": "Тест"},
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_series_link_series_not_found(
+    auth_headers: dict, client: AsyncClient
+):
+    response = await client.post(
+        "/series/999999/links",
+        json={"link_url": "https://example.com", "link_title": "Тест"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_create_series_link_forbidden_plain_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, не входящий в состав серии, получает 403."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/links",
+        json={"link_url": "https://example.com", "link_title": "Тест"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_series_link_ok_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор (уровень 2) успешно создаёт ссылку."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/links",
+        json={"link_url": "https://example.com/video", "link_title": "Видео"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    link_id = data["id"]
+    request.addfinalizer(lambda: asyncio.run(_cleanup_series_link(link_id)))
+
+    assert data["link_url"] == "https://example.com/video"
+    assert data["link_title"] == "Видео"
+    assert "id" in data
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_series_link_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит ровно поля id, link_url, link_title."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/links",
+        json={"link_url": "https://example.com/shape", "link_title": "Форма"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    link_id = data["id"]
+    request.addfinalizer(lambda: asyncio.run(_cleanup_series_link(link_id)))
+
+    assert set(data.keys()) == {"id", "link_url", "link_title"}
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "timer",
+        "translator",
+        "director",
+    ],
+)
+async def test_create_series_link_ok_as_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, назначенный на любую должность серии, может добавить ссылку."""
+    staff_user, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_user.user_id}
+    )
+    headers = await login_user(client, staff_user.nickname)
+
+    response = await client.post(
+        f"/series/{series.id}/links",
+        json={
+            "link_url": f"https://example.com/{staff_field}",
+            "link_title": f"Ссылка через {staff_field}",
+        },
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    link_id = data["id"]
+    request.addfinalizer(lambda: asyncio.run(_cleanup_series_link(link_id)))
+
+    assert data["link_title"] == f"Ссылка через {staff_field}"

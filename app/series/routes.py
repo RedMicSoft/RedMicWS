@@ -31,6 +31,8 @@ from app.series.schemas import (
     SeriesNoActorsUpdate,
     SeriesNoActorsResponse,
     MaterialCreateResponse,
+    SeriesLinkCreate,
+    SeriesLinkResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -47,7 +49,7 @@ from .utils import (
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
 )
-from .models import Series, Material
+from .models import Series, Material, SeriesLink
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role, RoleState
 from app.files.models import FileModel
@@ -366,6 +368,27 @@ async def create_material(
     await db.refresh(db_material)
 
     return db_material
+
+
+@router.post(
+    "/{seria_id}/links",
+    response_model=SeriesLinkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_series_link(
+    data: SeriesLinkCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesDataAccessChecker())],
+) -> SeriesLink:
+    db_link = SeriesLink(
+        series_id=db_seria.id,
+        link_url=data.link_url,
+        link_title=data.link_title,
+    )
+    db.add(db_link)
+    await db.commit()
+    await db.refresh(db_link)
+    return db_link
 
 
 @router.delete(

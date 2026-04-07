@@ -162,6 +162,19 @@ class MaterialCreateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SeriesLinkCreate(BaseModel):
+    link_url: str
+    link_title: str
+
+
+class SeriesLinkResponse(BaseModel):
+    id: int
+    link_url: str
+    link_title: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SeriesResponse(BaseModel):
     id: int
     project: SeriesCreateProjectResponse

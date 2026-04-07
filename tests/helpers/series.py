@@ -5,7 +5,7 @@ import pytest
 
 from tests.conftest import TestSession
 from tests.helpers import _uid
-from app.series.models import Series, SeriesState, Material
+from app.series.models import Series, SeriesState, Material, SeriesLink
 
 
 STAFF_WORK_TYPES = {
@@ -84,3 +84,36 @@ async def create_material(
         request.addfinalizer(lambda: asyncio.run(_delete()))
 
     return material
+
+
+async def create_series_link(
+    series_id: int,
+    request: pytest.FixtureRequest | None = None,
+    link_url: str | None = None,
+    link_title: str = "Тестовая ссылка",
+) -> SeriesLink:
+    if link_url is None:
+        link_url = f"https://example.com/{_uid()}"
+    async with TestSession() as s:
+        link = SeriesLink(
+            series_id=series_id,
+            link_url=link_url,
+            link_title=link_title,
+        )
+        s.add(link)
+        await s.commit()
+        await s.refresh(link)
+
+    if request is not None:
+        link_id = link.id
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_link = await s.get(SeriesLink, link_id)
+                if db_link:
+                    await s.delete(db_link)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return link
