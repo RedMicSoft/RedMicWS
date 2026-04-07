@@ -25,6 +25,11 @@ ALGORITHM = "HS256"
 MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / "media"
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
+MEMBER_LEVEL = 1
+CURATOR_LEVEL = 2
+ADMIN_LEVEL = 3
+SENIOR_ADMIN_LEVEL = 4
+
 
 def hash_password(password: str) -> str:
     """
@@ -80,6 +85,34 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+class LevelChecker:
+    def __init__(self, min_allowed_level: int):
+        self.min_allowed_level = min_allowed_level
+
+    async def _is_access_level_sufficient(
+        self, user: UserModel, db: AsyncSession
+    ) -> bool:
+        try:
+            user_level = await get_max_lvl(db, user)
+            return user_level >= self.min_allowed_level
+        except HTTPException:
+            return False
+
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ):
+        if self._is_access_level_sufficient(user, db):
+            return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+
+at_least_curator = LevelChecker(CURATOR_LEVEL)
+at_least_admin = LevelChecker(ADMIN_LEVEL)
+at_least_senior_admin = LevelChecker(SENIOR_ADMIN_LEVEL)
 
 
 async def get_max_lvl(db: AsyncSession, user: UserModel) -> int:
@@ -205,3 +238,15 @@ async def get_id_deleted_user():
         )
 
     return del_user.user_id
+
+
+class UserChecker:
+    async def __call__(
+        self, user_id: int, db: AsyncSession = Depends(get_db)
+    ) -> UserModel:
+        db_user = await db.get(UserModel, user_id)
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
+            )
+        return db_user

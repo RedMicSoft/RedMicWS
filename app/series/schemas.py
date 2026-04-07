@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, date
 from ..users.schemas import UserResponse
 from sqlalchemy import null, Null
+from .models import SeriesState
 
 
 class SeriesParticipant(BaseModel):
@@ -67,11 +68,111 @@ class SeriesCreateSeriesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserWorkSeriaInfo(BaseModel):
+    seria_id: int
+    seria_title: str
+    state: str
+
+
+class UserWorkProjectInfo(BaseModel):
+    project_id: int
+    project_title: str
+
+
+class UserWorkRoleInfo(BaseModel):
+    role_name: str
+    state: str
+
+
+class UserWorkItem(BaseModel):
+    seria: UserWorkSeriaInfo
+    project: UserWorkProjectInfo
+    work_type: str
+    role_is_ready: bool
+    subs: bool
+    role: UserWorkRoleInfo | None
+
+
+class SeriesNoActorsUpdate(BaseModel):
+    curator: int | None = None
+    sound_engineer: int | None = None
+    raw_sound_engineer: int | None = None
+    director: int | None = None
+    timer: int | None = None
+    subtitler: int | None = None
+
+
+class SeriesNoActorsResponse(BaseModel):
+    curator: SeriesParticipant | None
+    sound_engineer: SeriesParticipant | None
+    raw_sound_engineer: SeriesParticipant | None
+    director: SeriesParticipant | None
+    timer: SeriesParticipant | None
+    subtitler: SeriesParticipant | None
+
+
+class SeriesDataUpdate(BaseModel):
+    seria_title: Optional[str] = None
+    start_date: Optional[date] = None
+    first_stage_date: Optional[date] = None
+    second_stage_date: Optional[date] = None
+    publication_date: Optional[date] = None
+    note: Optional[str] = None
+    state: Optional[SeriesState] = None
+
+    @field_validator(
+        "start_date",
+        "first_stage_date",
+        "second_stage_date",
+        "publication_date",
+        mode="before",
+    )
+    @classmethod
+    def parse_date(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return datetime.strptime(v, "%d.%m.%y").date()
+            except ValueError:
+                raise ValueError("Дата должна быть в формате ДД.ММ.ГГ")
+        return v
+
+
+class SeriesDataResponse(BaseModel):
+    seria_title: str
+    start_date: date
+    first_stage_date: date
+    second_stage_date: date
+    publication_date: date
+    note: str | None
+    state: str
+
+
 class SeriesMaterialsResponse(BaseModel):
     id: int
     material_title: str
     material_prev_title: str
     material_link: str
+
+
+class MaterialCreateResponse(BaseModel):
+    id: int
+    material_title: str
+    material_link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SeriesLinkCreate(BaseModel):
+    link_url: str
+    link_title: str
+
+
+class SeriesLinkResponse(BaseModel):
+    id: int
+    link_url: str
+    link_title: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SeriesResponse(BaseModel):

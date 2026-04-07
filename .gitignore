@@ -208,6 +208,7 @@ __marimo__/
 
 # database
 app/database.py
+test_redmic.db
 app/tests.py
 #media
 .media
@@ -220,3 +221,9 @@ app/tests.py
 
 .idea/workspace.xml
 alembic.ini
+
+.vscode
+.claude/settings.local.json
+
+# test temporary files
+test_redmic.db-journal
