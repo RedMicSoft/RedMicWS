@@ -12,7 +12,7 @@ from app.users.models import User as UserModel
 from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
-from .models import Series
+from .models import Series, Material
 from ..roles.models import Role
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -115,6 +115,35 @@ class SeriesAccessChecker:
         return db_seria
 
 
+class SeriesNoActorsAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_seria: Series = Depends(SeriesChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        project_curator_id = None
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if db_project:
+            project_curator_id = db_project.curator_id
+
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if (
+            user_level < CURATOR_LEVEL
+            and user.user_id != db_seria.curator
+            and user.user_id != project_curator_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
+            )
+
+        return db_seria
+
+
 class SeriesDataAccessChecker:
     async def __call__(
         self,
@@ -132,3 +161,42 @@ class SeriesDataAccessChecker:
                 status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
             )
         return db_seria
+
+
+class MaterialChecker:
+    async def __call__(
+        self, material_id: int, db: AsyncSession = Depends(get_db)
+    ) -> Material:
+        db_material = await db.get(Material, material_id)
+        if not db_material:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Материал не найден."
+            )
+        return db_material
+
+
+class MaterialAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_material: Material = Depends(MaterialChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Material:
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        db_seria = await db.get(Series, db_material.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        await SeriesDataAccessChecker()(user=user, db_seria=db_seria, db=db)
+
+        if user_level < CURATOR_LEVEL and user.user_id not in db_seria.staff_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
+            )
+        return db_material

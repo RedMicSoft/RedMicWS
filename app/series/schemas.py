@@ -93,6 +93,24 @@ class UserWorkItem(BaseModel):
     role: UserWorkRoleInfo | None
 
 
+class SeriesNoActorsUpdate(BaseModel):
+    curator: int | None = None
+    sound_engineer: int | None = None
+    raw_sound_engineer: int | None = None
+    director: int | None = None
+    timer: int | None = None
+    subtitler: int | None = None
+
+
+class SeriesNoActorsResponse(BaseModel):
+    curator: SeriesParticipant | None
+    sound_engineer: SeriesParticipant | None
+    raw_sound_engineer: SeriesParticipant | None
+    director: SeriesParticipant | None
+    timer: SeriesParticipant | None
+    subtitler: SeriesParticipant | None
+
+
 class SeriesDataUpdate(BaseModel):
     seria_title: Optional[str] = None
     start_date: Optional[date] = None
@@ -134,6 +152,27 @@ class SeriesMaterialsResponse(BaseModel):
     material_title: str
     material_prev_title: str
     material_link: str
+
+
+class MaterialCreateResponse(BaseModel):
+    id: int
+    material_title: str
+    material_link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SeriesLinkCreate(BaseModel):
+    link_url: str
+    link_title: str
+
+
+class SeriesLinkResponse(BaseModel):
+    id: int
+    link_url: str
+    link_title: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SeriesResponse(BaseModel):
