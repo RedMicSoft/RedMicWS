@@ -154,6 +154,14 @@ class SeriesMaterialsResponse(BaseModel):
     material_link: str
 
 
+class MaterialCreateResponse(BaseModel):
+    id: int
+    material_title: str
+    material_link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SeriesResponse(BaseModel):
     id: int
     project: SeriesCreateProjectResponse

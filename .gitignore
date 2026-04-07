@@ -224,3 +224,6 @@ alembic.ini
 
 .vscode
 .claude/settings.local.json
+
+# test temporary files
+test_redmic.db-journal

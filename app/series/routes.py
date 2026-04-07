@@ -30,6 +30,7 @@ from app.series.schemas import (
     SeriesDataResponse,
     SeriesNoActorsUpdate,
     SeriesNoActorsResponse,
+    MaterialCreateResponse,
 )
 from app.users.utils import UserChecker, get_current_user
 from app.roles.schemas import RoleCreate
@@ -45,9 +46,11 @@ from .utils import (
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
 )
-from .models import Series
+from .models import Series, Material
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role, RoleState
+from app.files.models import FileModel
+from app.files.utils import save_file
 
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -327,6 +330,41 @@ async def update_series_data(
         note=db_seria.note,
         state=db_seria.state,
     )
+
+
+@router.post(
+    "/{seria_id}/materials",
+    response_model=MaterialCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_material(
+    material_file: UploadFile,
+    material_title: Annotated[str, Form()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesDataAccessChecker())],
+) -> Material:
+    saved = await save_file(material_file)
+
+    db_file = FileModel(
+        filename=material_title,
+        file_url=saved["file_url"],
+        category="material",
+        prev_filename=saved["prev_filename"],
+    )
+    db.add(db_file)
+
+    db_material = Material(
+        series_id=db_seria.id,
+        material_title=material_title,
+        material_prev_title=saved["prev_filename"],
+        material_link=saved["file_url"],
+    )
+    db.add(db_material)
+
+    await db.commit()
+    await db.refresh(db_material)
+
+    return db_material
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

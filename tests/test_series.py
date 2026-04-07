@@ -1,15 +1,33 @@
+import asyncio
+from pathlib import Path
+
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 
 from fastapi import status
 
+from tests.conftest import TestSession
 from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series, STAFF_WORK_TYPES
 from tests.helpers.roles import create_role
+from app.files.models import FileModel
 from app.roles.models import RoleState
 from app.series.models import SeriesState
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
+
+
+async def _cleanup_material_file(material_link: str) -> None:
+    filename = material_link.split("/")[-1]
+    file_path = Path("team_files") / filename
+    if file_path.exists():
+        file_path.unlink()
+    async with TestSession() as s:
+        db_file = await s.scalar(select(FileModel).where(FileModel.file_url == material_link))
+        if db_file:
+            await s.delete(db_file)
+            await s.commit()
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
@@ -757,3 +775,144 @@ async def test_update_series_data_all_valid_states(
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["state"] == state
+
+
+# ---------------------------------------------------------------------------
+# POST /series/{seria_id}/materials
+# ---------------------------------------------------------------------------
+
+_TEST_FILE = ("material.txt", b"test material content", "text/plain")
+
+
+async def test_create_material_no_auth(client: AsyncClient):
+    response = await client.post(
+        "/series/999999/materials",
+        data={"material_title": "Тест"},
+        files={"material_file": _TEST_FILE},
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_material_series_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.post(
+        "/series/999999/materials",
+        data={"material_title": "Тест"},
+        files={"material_file": _TEST_FILE},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_create_material_forbidden_plain_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, не входящий в состав серии, получает 403."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": "Тест"},
+        files={"material_file": _TEST_FILE},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_material_ok_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор (уровень 2) успешно создаёт материал."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": "Исходники"},
+        files={"material_file": _TEST_FILE},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    request.addfinalizer(lambda: asyncio.run(_cleanup_material_file(data["material_link"])))
+
+    assert data["material_title"] == "Исходники"
+    assert data["material_link"].startswith("/team_files/")
+    assert "id" in data
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_material_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит ровно поля id, material_title, material_link."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": "Тест"},
+        files={"material_file": _TEST_FILE},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    request.addfinalizer(lambda: asyncio.run(_cleanup_material_file(data["material_link"])))
+
+    assert set(data.keys()) == {"id", "material_title", "material_link"}
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    ["curator", "sound_engineer", "raw_sound_engineer", "timer", "translator", "director"],
+)
+async def test_create_material_ok_as_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, назначенный на любую должность серии, может добавить материал."""
+    staff_user, _ = await create_user_with_level(access_level=MEMBER_LEVEL, request=request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, **{staff_field: staff_user.user_id})
+    headers = await login_user(client, staff_user.nickname)
+
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": f"Материал через {staff_field}"},
+        files={"material_file": _TEST_FILE},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    request.addfinalizer(lambda: asyncio.run(_cleanup_material_file(data["material_link"])))
+
+    assert data["material_title"] == f"Материал через {staff_field}"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_material_title_matches_param(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """material_title в ответе совпадает с переданным параметром."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    title = "Русская дорожка — финал"
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": title},
+        files={"material_file": _TEST_FILE},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    request.addfinalizer(lambda: asyncio.run(_cleanup_material_file(data["material_link"])))
+
+    assert data["material_title"] == title
