@@ -32,12 +32,13 @@ from app.series.schemas import (
     SeriesNoActorsResponse,
     MaterialCreateResponse,
 )
-from app.users.utils import UserChecker, get_current_user
+from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
 from ..projects.utils import ProjectChecker, AccessChecker
 from ..users import get_max_lvl
 from ..users.models import User as UserModel
 from .utils import (
+    MaterialAccessChecker,
     save_srt,
     compute_dub_progress,
     get_series_participants,
@@ -365,6 +366,21 @@ async def create_material(
     await db.refresh(db_material)
 
     return db_material
+
+
+@router.delete(
+    "/materials/{material_id}",
+    response_model=str,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_material(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_material: Annotated[Material, Depends(MaterialAccessChecker())],
+) -> str:
+    await db.delete(db_material)
+    await db.commit()
+
+    return "Материал успешно удалён"
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)
