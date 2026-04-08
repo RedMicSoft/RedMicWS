@@ -236,7 +236,7 @@ async def get_series_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
-    db_series = await db.scalar()
+    return db_series
 
 
 @router.patch("/{seria_id}/noactors", response_model=SeriesNoActorsResponse)
