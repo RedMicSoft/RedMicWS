@@ -156,7 +156,16 @@ class SeriesDataAccessChecker:
         except HTTPException:
             user_level = 0
 
-        if user_level < CURATOR_LEVEL and user.user_id not in db_seria.staff_ids:
+        project_curator_id = None
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if db_project:
+            project_curator_id = db_project.curator_id
+
+        if (
+            user_level < CURATOR_LEVEL
+            and user.user_id not in db_seria.staff_ids
+            and user.user_id != project_curator_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
             )
@@ -225,8 +234,4 @@ class MaterialAccessChecker:
 
         await SeriesDataAccessChecker()(user=user, db_seria=db_seria, db=db)
 
-        if user_level < CURATOR_LEVEL and user.user_id not in db_seria.staff_ids:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено."
-            )
         return db_material

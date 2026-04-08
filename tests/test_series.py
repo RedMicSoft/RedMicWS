@@ -329,6 +329,26 @@ async def test_update_series_data_forbidden_member(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def test_update_series_data_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может обновить данные серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.patch(
+        f"/series/{series.id}/data",
+        json={"note": "изменено куратором проекта"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["note"] == "изменено куратором проекта"
+
+
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_ok_full(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
@@ -910,6 +930,32 @@ async def test_create_material_ok_as_staff_member(
     assert data["material_title"] == f"Материал через {staff_field}"
 
 
+async def test_create_material_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может добавить материал к серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.post(
+        f"/series/{series.id}/materials",
+        data={"material_title": "Материал от куратора проекта"},
+        files={"material_file": _TEST_FILE},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    request.addfinalizer(
+        lambda: asyncio.run(_cleanup_material_file(data["material_link"]))
+    )
+
+    assert data["material_title"] == "Материал от куратора проекта"
+
+
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_create_material_title_matches_param(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
@@ -1000,6 +1046,23 @@ async def test_delete_material_ok_as_staff_member(
     response = await client.delete(
         f"/series/materials/{material.id}", headers=headers
     )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "Материал успешно удалён"
+
+
+async def test_delete_material_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может удалить материал серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.delete(f"/series/materials/{material.id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "Материал успешно удалён"
 
@@ -1133,6 +1196,33 @@ async def test_create_series_link_ok_as_staff_member(
     assert data["link_title"] == f"Ссылка через {staff_field}"
 
 
+async def test_create_series_link_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может добавить ссылку к серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.post(
+        f"/series/{series.id}/links",
+        json={
+            "link_url": "https://example.com/project-curator",
+            "link_title": "Ссылка от куратора проекта",
+        },
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    link_id = data["id"]
+    request.addfinalizer(lambda: asyncio.run(_cleanup_series_link(link_id)))
+
+    assert data["link_title"] == "Ссылка от куратора проекта"
+
+
 # ---------------------------------------------------------------------------
 # DELETE /series/links/{link_id}
 # ---------------------------------------------------------------------------
@@ -1192,6 +1282,23 @@ async def test_delete_series_link_ok_as_staff_member(
     series = await create_series(project.project_id, request, **{staff_field: staff_user.user_id})
     link = await create_series_link(series.id)
     headers = await login_user(client, staff_user.nickname)
+
+    response = await client.delete(f"/series/links/{link.id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "Ссылка успешно удалена"
+
+
+async def test_delete_series_link_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может удалить ссылку серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    link = await create_series_link(series.id)
+    headers = await login_user(client, project_curator.nickname)
 
     response = await client.delete(f"/series/links/{link.id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
