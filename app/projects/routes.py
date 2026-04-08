@@ -41,6 +41,7 @@ from .schemas import (
     ProjectCuratorUpdate,
     ProjectParticipantCreate,
     ProjectDescriptionUpdate,
+    ProjectWayUpdate,
     ProjectParticipantsResponse,
     voice_types,
     ProjectTypeUpdate,
