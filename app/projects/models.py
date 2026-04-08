@@ -20,6 +20,7 @@ class Project(Base):
     image_url: Mapped[str | None] = mapped_column()
     created_at: Mapped[date] = mapped_column()
     status: Mapped[str] = mapped_column()
+    way: Mapped[str | None] = mapped_column(default=None)
     description: Mapped[str | None] = mapped_column(default=None)
 
     links: Mapped[list["ProjectLink"]] = relationship(

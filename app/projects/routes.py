@@ -86,6 +86,7 @@ async def get_projects(
             "project_id": project.project_id,
             "title": project.title,
             "status": project.status,
+            "way": project.way,
             "image_url": project.image_url,
             "participants": [
                 participant.user_id for participant in project.participants
@@ -293,6 +294,22 @@ async def update_project_description(
     db_project: ProjectModel = Depends(ProjectChecker()),
 ):
     db_project.description = description.description
+    await db.commit()
+    await db.refresh(db_project)
+
+    upd_project = await get_db_project(project_id, db)
+    return upd_project
+
+
+@router.patch("/{project_id}/way")
+async def update_project_way(
+    project_id: int,
+    way: ProjectWayUpdate,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    db_project: ProjectModel = Depends(ProjectChecker()),
+):
+    db_project.way = way.way
     await db.commit()
     await db.refresh(db_project)
 

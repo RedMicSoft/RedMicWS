@@ -73,6 +73,7 @@ class ProjectResponse(BaseModel):
     roles: list[RoleResponse] | None
     image_url: str | None
     description: str | None
+    way: str | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +88,7 @@ class ProjectsResponse(BaseModel):
     project_id: int
     title: str
     status: str
+    way: str | None
     image_url: str | None
     participants: list[int] | None
 
@@ -114,6 +116,7 @@ class ProjectCreate(BaseModel):
         created_at: Annotated[date, Form(...)],
         curator_id: Annotated[int, Form(...)],
         description: Annotated[str | None, Form(...)],
+        way: Annotated[str | None, Form(...)],
         status: Annotated[status_list, Form(...)] = "подготовка",
     ) -> "ProjectCreate":
         return cls(
@@ -123,6 +126,7 @@ class ProjectCreate(BaseModel):
             curator_id=curator_id,
             status=status,
             description=description,
+            way=way,
         )
 
 
@@ -144,6 +148,9 @@ class ProjectParticipantCreate(BaseModel):
 
 class ProjectDescriptionUpdate(BaseModel):
     description: str
+
+class ProjectWayUpdate(BaseModel):
+    way: str
 
 
 class ProjectTypeUpdate(BaseModel):
