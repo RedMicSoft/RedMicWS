@@ -253,9 +253,12 @@ async def get_series_by_id(
         )
 
 
-    staff_ids = [uid for uid in s.staff_ids if uid and uid != DELETED_USER_ID]
-    staff_users_result = await db.execute(select(UserModel).where(UserModel.user_id.in_(staff_ids)))
-    staff_map = {u.user_id: u for u in staff_users_result.scalars().all()}
+    valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != DELETED_USER_ID]
+
+    staff_map = {}
+    if valid_staff_ids:
+        staff_users = await db.execute(select(UserModel).where(UserModel.user_id.in_(valid_staff_ids)))
+        staff_map = {u.user_id: u for u in staff_users.scalars().all()}
 
     def format_user(user_id):
         u = staff_map.get(user_id)
