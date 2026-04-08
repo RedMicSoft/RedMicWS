@@ -107,6 +107,7 @@ class ProjectCreate(BaseModel):
         default="подготовка",
     )  # default = подготовка
     description: str | None
+    way: str | None
 
     @classmethod
     def as_form(
