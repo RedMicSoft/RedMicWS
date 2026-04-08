@@ -253,7 +253,7 @@ async def get_series_by_id(
         )
 
 
-    valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != DELETED_USER_ID]
+    valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != -1]
 
     staff_map = {}
     if valid_staff_ids:
