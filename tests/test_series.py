@@ -771,6 +771,77 @@ async def test_update_noactors_unassigned_fields_are_null(
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_nonexistent_user_single(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Несуществующий user_id в одном поле → 404."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"curator": 999999999},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_nonexistent_user_multiple_fields(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Несуществующие user_id в нескольких полях → 404."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"director": 999999991, "timer": 999999992},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_mix_valid_and_nonexistent_users(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Если хотя бы один user_id не существует — 404, даже если остальные валидны."""
+    real_user = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"curator": real_user.user_id, "sound_engineer": 999999999},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_noactors_null_skips_user_check(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """null в поле не вызывает проверку пользователя — запрос успешен."""
+    worker = await create_user(request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, curator=worker.user_id)
+
+    response = await client.patch(
+        f"/series/{series.id}/noactors",
+        json={"curator": None},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["curator"] is None
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_update_series_data_invalid_state(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):

@@ -390,6 +390,24 @@ async def update_series_no_actors(
         "subtitler": "translator",
     }
 
+    incoming_user_ids = {
+        getattr(data, field)
+        for field in request_to_model
+        if field in data.model_fields_set and getattr(data, field) is not None
+    }
+    if incoming_user_ids:
+        existing_ids = set(
+            await db.scalars(
+                select(UserModel.user_id).where(UserModel.user_id.in_(incoming_user_ids))
+            )
+        )
+        missing = incoming_user_ids - existing_ids
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пользователи не найдены: {sorted(missing)}",
+            )
+
     for request_field, model_field in request_to_model.items():
         if request_field in data.model_fields_set:
             setattr(db_seria, model_field, getattr(data, request_field))
