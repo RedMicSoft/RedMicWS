@@ -186,3 +186,62 @@ class SeriesResponse(BaseModel):
     note: str
     state: str
     materials: list[SeriesMaterialsResponse] = Field(default_factory=list)
+
+
+# --- Schemas for PUT /{seria_id}/subs ---
+
+class AssFixItemResponse(BaseModel):
+    fix_id: int
+    fix_note: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssFileSubsResponse(BaseModel):
+    ass_file_url: str
+    ass_fixes: list[AssFixItemResponse]
+
+
+class ActorSubsResponse(BaseModel):
+    user_id: int
+    nickname: str
+    avatar_url: str | None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FixSubsResponse(BaseModel):
+    id: int
+    phrase: int
+    note: str
+    ready: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecordSubsResponse(BaseModel):
+    id: int
+    record_title: str
+    record_note: str | None
+    record_url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoleSubsResponse(BaseModel):
+    id: int
+    role_name: str
+    actor: ActorSubsResponse | None
+    fixes: list[FixSubsResponse]
+    note: str | None
+    checked: bool
+    timed: bool
+    state: str
+    subtitle: str
+    records: list[RecordSubsResponse]
+
+
+class SubsUpdateResponse(BaseModel):
+    ass_file: AssFileSubsResponse
+    roles: list[RoleSubsResponse]

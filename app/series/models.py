@@ -92,6 +92,12 @@ class Series(Base):
         cascade="all, delete-orphan",
     )
 
+    ass_fixes: Mapped[list["AssFile"]] = relationship(
+        "AssFile",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
     @property
     def staff_ids(self) -> list[int]:
         return [
@@ -142,4 +148,7 @@ class AssFile(Base):
     __tablename__ = "ass_fixes"
 
     fix_id: Mapped[int] = mapped_column(primary_key=True)
+    series_id: Mapped[int] = mapped_column(ForeignKey("series.id", ondelete="CASCADE"))
     fix_note: Mapped[str] = mapped_column()
+
+    series: Mapped["Series"] = relationship("Series", back_populates="ass_fixes")
