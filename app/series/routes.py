@@ -226,17 +226,136 @@ async def create_series(
 
 @router.get("/{series_id}")
 async def get_series_by_id(
-    series_id: int,
-    user: UserModel = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+        series_id: int,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
 ):
-    db_series = await db.scalar(select(Series).where(Series.id == series_id))
-    if not db_series:
+    # 1. Запрос со всеми необходимыми JOIN-ами
+    query = (
+        select(Series)
+        .where(Series.id == series_id)
+        .options(
+            selectinload(Series.project),
+            selectinload(Series.materials),
+            selectinload(Series.links),
+            selectinload(Series.roles).selectinload(Role.user),
+            selectinload(Series.roles).selectinload(Role.fixes),
+            selectinload(Series.roles).selectinload(Role.records),
+        )
+    )
+
+    result = await db.execute(query)
+    s = result.scalar_one_or_none()
+
+    if not s:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
-    return db_series
+
+    staff_ids = [uid for uid in s.staff_ids if uid and uid != DELETED_USER_ID]
+    staff_users_result = await db.execute(select(UserModel).where(UserModel.user_id.in_(staff_ids)))
+    staff_map = {u.user_id: u for u in staff_users_result.scalars().all()}
+
+    def format_user(user_id):
+        u = staff_map.get(user_id)
+        if not u: return None
+        return {
+            "user_id": str(u.user_id),
+            "nickname": u.nickname,
+            "avatar_url": u.avatar_url,
+            "is_active": u.is_active
+        }
+
+    def format_date(d: date):
+        return d.strftime("%d.%m.%y") if d else None
+
+    def get_role_state(role):
+        if not role.records:
+            return "не загружена"
+        if not getattr(role, 'timed', True):
+            return "не затаймлена"
+        if not getattr(role, 'checked', True):
+            return "не проверена"
+        if role.fixes and any(not f.ready for f in role.fixes):
+            return "требуются фиксы"
+        return "готова к сведению"
+
+    return {
+        "id": str(s.id),
+        "project": {
+            "project_id": str(s.project.project_id),
+            "project_title": s.project.title,
+            "project_curator_id": str(s.project.curator_id) if hasattr(s.project, 'curator_id') else None,
+        },
+        "seria_title": s.title,
+        "start_date": format_date(s.start_date),
+        "first_stage_date": format_date(s.first_deadline),
+        "second_stage_date": format_date(s.second_deadline),
+        "publication_date": format_date(s.exp_publish_date),
+        "note": s.note,
+        "state": s.state.value if hasattr(s.state, 'value') else s.state,
+        "materials": [
+            {
+                "id": str(m.id),
+                "material_title": m.title,
+                "material_prev_title": getattr(m, 'prev_title', m.title),
+                "material_link": m.url
+            } for m in s.materials
+        ],
+        "ass_file": {
+            "ass_file_url": s.ass_url,
+            "ass_fixes": []
+        },
+        "links": [
+            {
+                "id": str(l.id),
+                "link_title": l.title,
+                "link_url": l.url
+            } for l in s.links
+        ],
+        "no_actors": {
+            "curator": format_user(s.curator),
+            "sound_engineer": format_user(s.sound_engineer),
+            "raw_sound_engineer": format_user(s.raw_sound_engineer),
+            "director": format_user(s.director),
+            "timer": format_user(s.timer),
+            "subtitler": format_user(s.translator)
+        },
+        "roles": [
+            {
+                "id": str(r.id),
+                "role_name": r.title,
+                "actor": {
+                    "user_id": str(r.user.user_id) if r.user else None,
+                    "nickname": r.user.nickname if r.user else "Удаленный пользователь",
+                    "avatar_url": r.user.avatar_url if r.user else None,
+                    "is_active": r.user.is_active if r.user else False
+                },
+                "fixes": [
+                    {
+                        "id": str(f.id),
+                        "phrase": str(f.phrase_number),
+                        "note": f.note,
+                        "ready": f.ready
+                    } for f in r.fixes
+                ],
+                "note": getattr(r, 'note', ""),
+                "cheked": getattr(r, 'checked', False),
+                "timed": getattr(r, 'timed', False),
+                "state": get_role_state(r),
+                "subtitle": getattr(r, 'subtitle_url', None),
+                "records": [
+                    {
+                        "id": str(rec.id),
+                        "record_title": rec.title,
+                        "record_note": getattr(rec, 'analysis', ""),
+                        "record_url": rec.url
+                    } for rec in r.records
+                ]
+            } for r in s.roles
+        ]
+    }
 
 
 @router.patch("/{seria_id}/noactors", response_model=SeriesNoActorsResponse)
