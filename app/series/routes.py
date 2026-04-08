@@ -290,6 +290,7 @@ async def get_series_by_id(
             "project_id": str(s.project.project_id),
             "project_title": s.project.title,
             "project_curator_id": str(s.project.curator_id) if hasattr(s.project, 'curator_id') else None,
+            "project_image_url": s.project.image_url,
         },
         "seria_title": s.title,
         "start_date": format_date(s.start_date),
