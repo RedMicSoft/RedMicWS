@@ -14,6 +14,7 @@ class SeriesState(str, enum.Enum):
     MATERIALS_PREPARATION = "подготовка материалов"
     VOICE_OVER = "озвучка"
     MIXING = "сведение"
+    CHECHING = "проверка"
     PUBLICATION = "публикация"
     COMPLETED = "завершено"
 
