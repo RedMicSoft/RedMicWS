@@ -314,8 +314,8 @@ async def get_series_by_id(
         "links": [
             {
                 "id": str(l.id),
-                "link_title": l.title,
-                "link_url": l.url
+                "link_title": l.link_title,
+                "link_url": l.link_url
             } for l in s.links
         ],
         "no_actors": {
