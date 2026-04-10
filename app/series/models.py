@@ -2,9 +2,12 @@ from alembic.operations.toimpl import create_constraint
 from sqlalchemy import ForeignKey, Date, Text, Enum as SAenum
 from datetime import datetime, date, timezone
 from app.database import Base
+from app.projects.models import Project
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 import enum
+
+from app.roles.models import Role
 
 
 DELETED_USER_ID = -1
