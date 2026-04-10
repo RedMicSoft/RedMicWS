@@ -65,7 +65,6 @@ from .utils import (
 from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role, RoleState, Fix
-from app.files.models import FileModel
 from app.files.utils import save_file
 from .parser import ASSParser
 
@@ -143,9 +142,11 @@ async def get_user_work(
             work_type=r.work_type,
             role_is_ready=bool(r.role_is_ready),
             subs=r.ass_url is not None,
-            role=UserWorkRoleInfo(role_name=r.role_name, state=r.role_state)
-            if r.role_name is not None
-            else None,
+            role=(
+                UserWorkRoleInfo(role_name=r.role_name, state=r.role_state)
+                if r.role_name is not None
+                else None
+            ),
         )
         for r in rows
     ]
@@ -239,9 +240,9 @@ async def create_series(
 
 @router.get("/{series_id}")
 async def get_series_by_id(
-        series_id: int,
-        user: UserModel = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db),
+    series_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     # 1. Запрос со всеми необходимыми JOIN-ами
     query = (
@@ -265,22 +266,24 @@ async def get_series_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
-
     valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != -1]
 
     staff_map = {}
     if valid_staff_ids:
-        staff_users = await db.execute(select(UserModel).where(UserModel.user_id.in_(valid_staff_ids)))
+        staff_users = await db.execute(
+            select(UserModel).where(UserModel.user_id.in_(valid_staff_ids))
+        )
         staff_map = {u.user_id: u for u in staff_users.scalars().all()}
 
     def format_user(user_id):
         u = staff_map.get(user_id)
-        if not u: return None
+        if not u:
+            return None
         return {
             "user_id": str(u.user_id),
             "nickname": u.nickname,
             "avatar_url": u.avatar_url,
-            "is_active": u.is_active
+            "is_active": u.is_active,
         }
 
     def format_date(d: date):
@@ -289,9 +292,9 @@ async def get_series_by_id(
     def get_role_state(role):
         if not role.records:
             return "не загружена"
-        if not getattr(role, 'timed', True):
+        if not getattr(role, "timed", True):
             return "не затаймлена"
-        if not getattr(role, 'checked', True):
+        if not getattr(role, "checked", True):
             return "не проверена"
         if role.fixes and any(not f.ready for f in role.fixes):
             return "требуются фиксы"
@@ -302,7 +305,9 @@ async def get_series_by_id(
         "project": {
             "project_id": str(s.project.project_id),
             "project_title": s.project.title,
-            "project_curator_id": str(s.project.curator_id) if hasattr(s.project, 'curator_id') else None,
+            "project_curator_id": (
+                str(s.project.curator_id) if hasattr(s.project, "curator_id") else None
+            ),
             "project_image_url": s.project.image_url,
         },
         "seria_title": s.title,
@@ -311,24 +316,19 @@ async def get_series_by_id(
         "second_stage_date": format_date(s.second_deadline),
         "publication_date": format_date(s.exp_publish_date),
         "note": s.note,
-        "state": s.state.value if hasattr(s.state, 'value') else s.state,
+        "state": s.state.value if hasattr(s.state, "value") else s.state,
         "materials": [
             {
                 "id": str(m.id),
                 "material_title": m.material_title,
-                "material_link": m.material_link
-            } for m in s.materials
+                "material_link": m.material_link,
+            }
+            for m in s.materials
         ],
-        "ass_file": {
-            "ass_file_url": s.ass_url,
-            "ass_fixes": []
-        },
+        "ass_file": {"ass_file_url": s.ass_url, "ass_fixes": []},
         "links": [
-            {
-                "id": str(l.id),
-                "link_title": l.link_title,
-                "link_url": l.link_url
-            } for l in s.links
+            {"id": str(l.id), "link_title": l.link_title, "link_url": l.link_url}
+            for l in s.links
         ],
         "no_actors": {
             "curator": format_user(s.curator),
@@ -336,7 +336,7 @@ async def get_series_by_id(
             "raw_sound_engineer": format_user(s.raw_sound_engineer),
             "director": format_user(s.director),
             "timer": format_user(s.timer),
-            "subtitler": format_user(s.translator)
+            "subtitler": format_user(s.translator),
         },
         "roles": [
             {
@@ -346,31 +346,34 @@ async def get_series_by_id(
                     "user_id": str(r.user.user_id) if r.user else None,
                     "nickname": r.user.nickname if r.user else "Удаленный пользователь",
                     "avatar_url": r.user.avatar_url if r.user else None,
-                    "is_active": r.user.is_active if r.user else False
+                    "is_active": r.user.is_active if r.user else False,
                 },
                 "fixes": [
                     {
                         "id": str(f.id),
                         "phrase": str(f.phrase_number),
                         "note": f.note,
-                        "ready": f.ready
-                    } for f in r.fixes
+                        "ready": f.ready,
+                    }
+                    for f in r.fixes
                 ],
-                "note": getattr(r, 'note', ""),
-                "cheked": getattr(r, 'checked', False),
-                "timed": getattr(r, 'timed', False),
+                "note": getattr(r, "note", ""),
+                "cheked": getattr(r, "checked", False),
+                "timed": getattr(r, "timed", False),
                 "state": get_role_state(r),
-                "subtitle": getattr(r, 'subtitle_url', None),
+                "subtitle": getattr(r, "subtitle_url", None),
                 "records": [
                     {
                         "id": str(rec.id),
                         "record_title": rec.title,
-                        "record_note": getattr(rec, 'analysis', ""),
-                        "record_url": rec.url
-                    } for rec in r.records
-                ]
-            } for r in s.roles
-        ]
+                        "record_note": getattr(rec, "analysis", ""),
+                        "record_url": rec.url,
+                    }
+                    for rec in r.records
+                ],
+            }
+            for r in s.roles
+        ],
     }
 
 
@@ -397,7 +400,9 @@ async def update_series_no_actors(
     if incoming_user_ids:
         existing_ids = set(
             await db.scalars(
-                select(UserModel.user_id).where(UserModel.user_id.in_(incoming_user_ids))
+                select(UserModel.user_id).where(
+                    UserModel.user_id.in_(incoming_user_ids)
+                )
             )
         )
         missing = incoming_user_ids - existing_ids
@@ -496,14 +501,6 @@ async def create_material(
     db_seria: Annotated[Series, Depends(SeriesDataAccessChecker())],
 ) -> Material:
     saved = await save_file(material_file)
-
-    db_file = FileModel(
-        filename=material_title,
-        file_url=saved["file_url"],
-        category="material",
-        prev_filename=saved["prev_filename"],
-    )
-    db.add(db_file)
 
     db_material = Material(
         series_id=db_seria.id,
