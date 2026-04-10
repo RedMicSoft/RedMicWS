@@ -95,6 +95,15 @@ class ASSParser:
             if event.type != "Dialogue":
                 continue
 
+            # Пропускаем исходную запись «Начало», если она уже есть в файле,
+            # чтобы не создавать дубль с той, что вставили выше.
+            if (
+                event.start == 0
+                and event.end == BEGINNING_DURATION_MS
+                and event.text.strip() == "Начало"
+            ):
+                continue
+
             if event.text.strip() == TECH_MARKER:
                 tech_event = event.copy()
                 tech_event.text = (

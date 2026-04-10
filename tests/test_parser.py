@@ -134,3 +134,85 @@ def test_by_style_role_content(role: str) -> None:
     )
 
     assert content == expected
+
+
+# ---------------------------------------------------------------------------
+# subs_by_name_with_beginning — поле Name, «Начало» уже есть в исходнике
+# ---------------------------------------------------------------------------
+
+_NAME_BEG_DIR = os.path.join(os.path.dirname(__file__), "data", "subs_by_name_with_beginning")
+_NAME_BEG_PROJECT, _NAME_BEG_SERIES = _load_desc(_NAME_BEG_DIR)
+
+_NAME_BEG_ROLE_TO_FILE: dict[str, str] = {
+    "Ales": "test_Ales.srt",
+    "Fiery": "test_Fiery.srt",
+    "l_Luna": "test_I_Luna.srt",
+    "Мираша": "test_Мираша.srt",
+    "Надпись": "test_Надпись.srt",
+    "Rian": "test_Rian.srt",
+    "Sebner_TV": "test_Sebner_TV.srt",
+    "Староста": "test_Староста.srt",
+}
+
+
+@pytest.mark.parametrize("role", sorted(_NAME_BEG_ROLE_TO_FILE))
+def test_by_name_with_beginning_no_duplicate(role: str) -> None:
+    """При наличии «Начало» в исходнике запись не дублируется (use_name=True)."""
+    expected = _read_expected(
+        os.path.join(_NAME_BEG_DIR, "output"), _NAME_BEG_ROLE_TO_FILE[role]
+    )
+
+    parser = ASSParser(os.path.join(_NAME_BEG_DIR, "input", "test.ass"))
+    parser.load()
+    content = _normalize(
+        parser.get_role_content(
+            role,
+            project_description=_NAME_BEG_PROJECT,
+            series_description=_NAME_BEG_SERIES,
+            output_format="srt",
+        )
+    )
+
+    assert content.count("Начало") == 1
+    assert content == expected
+
+
+# ---------------------------------------------------------------------------
+# subs_by_style_with_beginning — поле Style, «Начало» уже есть в исходнике
+# ---------------------------------------------------------------------------
+
+_STYLE_BEG_DIR = os.path.join(os.path.dirname(__file__), "data", "subs_by_style_with_beginning")
+_STYLE_BEG_PROJECT, _STYLE_BEG_SERIES = _load_desc(_STYLE_BEG_DIR)
+
+_STYLE_BEG_ROLE_TO_FILE: dict[str, str] = {
+    "Twilight": "test_Twilight.srt",
+    "Spike": "test_Spike.srt",
+    "ms Cake": "test_ms Cake.srt",
+    "Mayor": "test_Mayor.srt",
+    "SB": "test_SB.srt",
+    "Фон_ж_1": "test_Фон_ж_1.srt",
+}
+
+
+@pytest.mark.parametrize("role", sorted(_STYLE_BEG_ROLE_TO_FILE))
+def test_by_style_with_beginning_no_duplicate(role: str) -> None:
+    """При наличии «Начало» в исходнике запись не дублируется (use_name=False)."""
+    expected = _read_expected(
+        os.path.join(_STYLE_BEG_DIR, "output"), _STYLE_BEG_ROLE_TO_FILE[role]
+    )
+
+    parser = ASSParser(
+        os.path.join(_STYLE_BEG_DIR, "input", "test.ass"), use_name=False
+    )
+    parser.load()
+    content = _normalize(
+        parser.get_role_content(
+            role,
+            project_description=_STYLE_BEG_PROJECT,
+            series_description=_STYLE_BEG_SERIES,
+            output_format="srt",
+        )
+    )
+
+    assert content.count("Начало") == 1
+    assert content == expected
