@@ -315,9 +315,8 @@ async def get_series_by_id(
         "materials": [
             {
                 "id": str(m.id),
-                "material_title": m.title,
-                "material_prev_title": getattr(m, 'prev_title', m.title),
-                "material_link": m.url
+                "material_title": m.material_title,
+                "material_link": m.material_link
             } for m in s.materials
         ],
         "ass_file": {
@@ -327,8 +326,8 @@ async def get_series_by_id(
         "links": [
             {
                 "id": str(l.id),
-                "link_title": l.title,
-                "link_url": l.url
+                "link_title": l.link_title,
+                "link_url": l.link_url
             } for l in s.links
         ],
         "no_actors": {
