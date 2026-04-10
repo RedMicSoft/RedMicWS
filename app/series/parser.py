@@ -8,8 +8,9 @@ BEGINNING_DURATION_MS = 100  # 0.1 секунды
 TECH_MARKER = "!t"
 TECH_INFO_PREFIX = "!ТЕХ ИНФ"
 
-# HTML-теги, которые pysubs2 добавляет при конвертации italic/bold-стилей в SRT.
-_HTML_TAG_RE = re.compile(r"</?(?:i|b|u|s)>", re.IGNORECASE)
+# HTML-теги, которые pysubs2 добавляет при конвертации italic/bold-стилей в SRT,
+# и ASS override-блоки вида {…}, которые не нужны в SRT-выводе.
+_SRT_CLEANUP_RE = re.compile(r"</?(?:i|b|u|s)>|\{[^}]*\}", re.IGNORECASE)
 
 
 class ASSParser:
@@ -97,11 +98,7 @@ class ASSParser:
 
             # Пропускаем исходную запись «Начало», если она уже есть в файле,
             # чтобы не создавать дубль с той, что вставили выше.
-            if (
-                event.start == 0
-                and event.end == BEGINNING_DURATION_MS
-                and event.text.strip() == "Начало"
-            ):
+            if event.start == 0 and event.text.strip() == "Начало":
                 continue
 
             if event.text.strip() == TECH_MARKER:
@@ -141,7 +138,7 @@ class ASSParser:
         output = self._build_role_ssa_file(role, project_description, series_description)
         content = output.to_string(output_format)
         if output_format == "srt":
-            content = _HTML_TAG_RE.sub("", content)
+            content = _SRT_CLEANUP_RE.sub("", content)
         return content
 
     def save_role(
