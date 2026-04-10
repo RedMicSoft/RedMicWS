@@ -166,7 +166,7 @@ class ASSParser:
         """
         output = self._build_role_ssa_file(role, project_description, series_description)
         if output_format == "srt":
-            content = _HTML_TAG_RE.sub("", output.to_string("srt"))
+            content = _SRT_CLEANUP_RE.sub("", output.to_string("srt"))
             with open(output_path, "w", encoding="utf-8-sig") as f:
                 f.write(content)
         else:
