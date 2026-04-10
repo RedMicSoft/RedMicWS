@@ -53,7 +53,6 @@ from .utils import (
 from .models import Series, Material, SeriesLink
 from app.projects.models import Project as ProjectModel
 from app.roles.models import Role, RoleState
-from app.files.models import FileModel
 from app.files.utils import save_file
 
 
@@ -483,14 +482,6 @@ async def create_material(
     db_seria: Annotated[Series, Depends(SeriesDataAccessChecker())],
 ) -> Material:
     saved = await save_file(material_file)
-
-    db_file = FileModel(
-        filename=material_title,
-        file_url=saved["file_url"],
-        category="material",
-        prev_filename=saved["prev_filename"],
-    )
-    db.add(db_file)
 
     db_material = Material(
         series_id=db_seria.id,

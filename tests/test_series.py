@@ -17,8 +17,8 @@ from tests.helpers.series import (
     STAFF_WORK_TYPES,
 )
 from tests.helpers.roles import create_role
-from app.files.models import FileModel
 from app.roles.models import RoleState
+from app.series.models import Material
 from app.series.models import SeriesState
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
@@ -29,9 +29,9 @@ async def _cleanup_material_file(material_link: str) -> None:
     if file_path.exists():
         file_path.unlink()
     async with TestSession() as s:
-        db_file = await s.scalar(select(FileModel).where(FileModel.file_url == material_link))
-        if db_file:
-            await s.delete(db_file)
+        db_material = await s.scalar(select(Material).where(Material.material_link == material_link))
+        if db_material:
+            await s.delete(db_material)
             await s.commit()
 
 
