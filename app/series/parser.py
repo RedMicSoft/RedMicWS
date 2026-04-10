@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Literal
 
 import pysubs2
@@ -6,6 +7,9 @@ import pysubs2
 BEGINNING_DURATION_MS = 100  # 0.1 секунды
 TECH_MARKER = "!t"
 TECH_INFO_PREFIX = "!ТЕХ ИНФ"
+
+# HTML-теги, которые pysubs2 добавляет при конвертации italic/bold-стилей в SRT.
+_HTML_TAG_RE = re.compile(r"</?(?:i|b|u|s)>", re.IGNORECASE)
 
 
 class ASSParser:
@@ -126,7 +130,10 @@ class ASSParser:
         не сохраняя на диск.
         """
         output = self._build_role_ssa_file(role, project_description, series_description)
-        return output.to_string(output_format)
+        content = output.to_string(output_format)
+        if output_format == "srt":
+            content = _HTML_TAG_RE.sub("", content)
+        return content
 
     def save_role(
         self,
@@ -152,7 +159,12 @@ class ASSParser:
             output_format:        формат выходного файла — «ass» или «srt».
         """
         output = self._build_role_ssa_file(role, project_description, series_description)
-        output.save(output_path, format_=output_format, encoding="utf-8")
+        if output_format == "srt":
+            content = _HTML_TAG_RE.sub("", output.to_string("srt"))
+            with open(output_path, "w", encoding="utf-8-sig") as f:
+                f.write(content)
+        else:
+            output.save(output_path, format_=output_format, encoding="utf-8")
 
     def save_all_roles(
         self,
