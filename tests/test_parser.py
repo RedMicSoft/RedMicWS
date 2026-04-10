@@ -5,17 +5,32 @@ import pytest
 
 from app.series.parser import ASSParser
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "subs_by_name_normal")
-INPUT_FILE = os.path.join(DATA_DIR, "input", "test.ass")
-DESC_FILE = os.path.join(DATA_DIR, "input", "description.json")
-OUTPUT_DIR = os.path.join(DATA_DIR, "output")
 
-with open(DESC_FILE, encoding="utf-8") as _f:
-    _desc = json.load(_f)
-PROJECT_DESCRIPTION: str = _desc["project"]
-SERIES_DESCRIPTION: str = _desc["series"]
+def _load_desc(data_dir: str) -> tuple[str, str]:
+    with open(os.path.join(data_dir, "input", "description.json"), encoding="utf-8") as f:
+        d = json.load(f)
+    return d["project"], d["series"]
 
-EXPECTED_ROLES = {
+
+def _read_expected(output_dir: str, filename: str) -> str:
+    """Читает эталонный файл, убирает BOM и нормализует переносы строк."""
+    with open(os.path.join(output_dir, filename), encoding="utf-8-sig") as f:
+        return f.read().replace("\r\n", "\n")
+
+
+def _normalize(content: str) -> str:
+    """Убирает BOM и нормализует переносы строк."""
+    return content.lstrip("\ufeff").replace("\r\n", "\n")
+
+
+# ---------------------------------------------------------------------------
+# subs_by_name_normal — роли берутся из поля Name
+# ---------------------------------------------------------------------------
+
+_NAME_DIR = os.path.join(os.path.dirname(__file__), "data", "subs_by_name_normal")
+_NAME_PROJECT, _NAME_SERIES = _load_desc(_NAME_DIR)
+
+_NAME_EXPECTED_ROLES = {
     "Ales",
     "Fiery",
     "l_Luna",
@@ -26,9 +41,8 @@ EXPECTED_ROLES = {
     "Староста",
 }
 
-# Явное сопоставление имени роли → файл с ожидаемым результатом.
 # Файл test_I_Luna.srt соответствует роли "l_Luna" (строчная L, не заглавная I).
-ROLE_TO_FILE: dict[str, str] = {
+_NAME_ROLE_TO_FILE: dict[str, str] = {
     "Ales": "test_Ales.srt",
     "Fiery": "test_Fiery.srt",
     "l_Luna": "test_I_Luna.srt",
@@ -40,36 +54,81 @@ ROLE_TO_FILE: dict[str, str] = {
 }
 
 
-def _read_expected(filename: str) -> str:
-    """Читает файл, убирает BOM и нормализует переносы строк."""
-    with open(os.path.join(OUTPUT_DIR, filename), encoding="utf-8-sig") as f:
-        return f.read().replace("\r\n", "\n")
-
-
-def _normalize(content: str) -> str:
-    """Убирает BOM и нормализует переносы строк."""
-    return content.lstrip("\ufeff").replace("\r\n", "\n")
-
-
-def test_extract_roles_by_name() -> None:
+def test_by_name_extract_roles() -> None:
     """Парсер правильно извлекает все роли из поля Name."""
-    parser = ASSParser(INPUT_FILE)
+    parser = ASSParser(os.path.join(_NAME_DIR, "input", "test.ass"))
     parser.load()
-    assert parser.roles == EXPECTED_ROLES
+    assert parser.roles == _NAME_EXPECTED_ROLES
 
 
-@pytest.mark.parametrize("role", sorted(ROLE_TO_FILE))
-def test_role_content_matches_expected(role: str) -> None:
-    """Контент, сгенерированный для роли, совпадает с эталонным файлом."""
-    expected = _read_expected(ROLE_TO_FILE[role])
+@pytest.mark.parametrize("role", sorted(_NAME_ROLE_TO_FILE))
+def test_by_name_role_content(role: str) -> None:
+    """Контент для роли (use_name=True) совпадает с эталонным файлом."""
+    expected = _read_expected(os.path.join(_NAME_DIR, "output"), _NAME_ROLE_TO_FILE[role])
 
-    parser = ASSParser(INPUT_FILE)
+    parser = ASSParser(os.path.join(_NAME_DIR, "input", "test.ass"))
     parser.load()
     content = _normalize(
         parser.get_role_content(
             role,
-            project_description=PROJECT_DESCRIPTION,
-            series_description=SERIES_DESCRIPTION,
+            project_description=_NAME_PROJECT,
+            series_description=_NAME_SERIES,
+            output_format="srt",
+        )
+    )
+
+    assert content == expected
+
+
+# ---------------------------------------------------------------------------
+# subs_by_style_normal — роли берутся из поля Style
+# ---------------------------------------------------------------------------
+
+_STYLE_DIR = os.path.join(os.path.dirname(__file__), "data", "subs_by_style_normal")
+_STYLE_PROJECT, _STYLE_SERIES = _load_desc(_STYLE_DIR)
+
+_STYLE_EXPECTED_ROLES = {
+    "Twilight",
+    "Spike",
+    "ms Cake",
+    "Mayor",
+    "SB",
+    "Фон_ж_1",
+}
+
+_STYLE_ROLE_TO_FILE: dict[str, str] = {
+    "Twilight": "test_Twilight.srt",
+    "Spike": "test_Spike.srt",
+    "ms Cake": "test_ms Cake.srt",
+    "Mayor": "test_Mayor.srt",
+    "SB": "test_SB.srt",
+    "Фон_ж_1": "test_Фон_ж_1.srt",
+}
+
+
+def test_by_style_extract_roles() -> None:
+    """Парсер правильно извлекает все роли из поля Style."""
+    parser = ASSParser(
+        os.path.join(_STYLE_DIR, "input", "test.ass"), use_name=False
+    )
+    parser.load()
+    assert parser.roles == _STYLE_EXPECTED_ROLES
+
+
+@pytest.mark.parametrize("role", sorted(_STYLE_ROLE_TO_FILE))
+def test_by_style_role_content(role: str) -> None:
+    """Контент для роли (use_name=False) совпадает с эталонным файлом."""
+    expected = _read_expected(os.path.join(_STYLE_DIR, "output"), _STYLE_ROLE_TO_FILE[role])
+
+    parser = ASSParser(
+        os.path.join(_STYLE_DIR, "input", "test.ass"), use_name=False
+    )
+    parser.load()
+    content = _normalize(
+        parser.get_role_content(
+            role,
+            project_description=_STYLE_PROJECT,
+            series_description=_STYLE_SERIES,
             output_format="srt",
         )
     )
