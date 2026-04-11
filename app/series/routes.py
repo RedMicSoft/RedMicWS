@@ -252,7 +252,6 @@ async def get_series_by_id(
     user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Запрос со всеми необходимыми JOIN-ами
     query = (
         select(Series)
         .where(Series.id == series_id)
@@ -274,6 +273,7 @@ async def get_series_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
+    # Собираем ID персонала, исключая заглушку -1
     valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != -1]
 
     staff_map = {}
@@ -284,11 +284,13 @@ async def get_series_by_id(
         staff_map = {u.user_id: u for u in staff_users.scalars().all()}
 
     def format_user(user_id):
+        if user_id is None or user_id == -1:
+            return None
         u = staff_map.get(user_id)
         if not u:
             return None
         return {
-            "user_id": str(u.user_id),
+            "user_id": u.user_id,
             "nickname": u.nickname,
             "avatar_url": u.avatar_url,
             "is_active": u.is_active,
@@ -298,25 +300,26 @@ async def get_series_by_id(
         return d.strftime("%d.%m.%y") if d else None
 
     def get_role_state(role):
-        if not role.records:
+        # Используем безопасный доступ к атрибутам, так как они могут быть не в модели
+        records = getattr(role, "records", [])
+        fixes = getattr(role, "fixes", [])
+        if not records:
             return "не загружена"
         if not getattr(role, "timed", True):
             return "не затаймлена"
         if not getattr(role, "checked", True):
             return "не проверена"
-        if role.fixes and any(not f.ready for f in role.fixes):
+        if fixes and any(not getattr(f, "ready", False) for f in fixes):
             return "требуются фиксы"
         return "готова к сведению"
 
     return {
-        "id": str(s.id),
+        "id": s.id,
         "project": {
-            "project_id": str(s.project.project_id),
+            "project_id": s.project.project_id,
             "project_title": s.project.title,
-            "project_curator_id": (
-                str(s.project.curator_id) if hasattr(s.project, "curator_id") else None
-            ),
-            "project_image_url": s.project.image_url,
+            "project_curator_id": getattr(s.project, "curator_id", None),
+            "project_image_url": getattr(s.project, "image_url", None),
         },
         "seria_title": s.title,
         "start_date": format_date(s.start_date),
@@ -327,15 +330,15 @@ async def get_series_by_id(
         "state": s.state.value if hasattr(s.state, "value") else s.state,
         "materials": [
             {
-                "id": str(m.id),
+                "id": m.id,
                 "material_title": m.material_title,
                 "material_link": m.material_link,
             }
             for m in s.materials
         ],
-        "ass_file": {"ass_file_url": s.ass_url, "ass_fixes": []},
+        "ass_file": {"ass_file_url": s.ass_url, "ass_fixes": []}, # Можно добавить логику загрузки AssFile если нужно
         "links": [
-            {"id": str(l.id), "link_title": l.link_title, "link_url": l.link_url}
+            {"id": l.id, "link_title": l.link_title, "link_url": l.link_url}
             for l in s.links
         ],
         "no_actors": {
@@ -348,34 +351,34 @@ async def get_series_by_id(
         },
         "roles": [
             {
-                "id": str(r.id),
-                "role_name": r.title,
+                "id": getattr(r, "id", getattr(r, "role_id", None)),
+                "role_name": r.role_name,
                 "actor": {
-                    "user_id": str(r.user.user_id) if r.user else None,
-                    "nickname": r.user.nickname if r.user else "Удаленный пользователь",
+                    "user_id": r.user.user_id if r.user else None,
+                    "nickname": r.user.nickname if r.user else "Не назначен",
                     "avatar_url": r.user.avatar_url if r.user else None,
                     "is_active": r.user.is_active if r.user else False,
                 },
                 "fixes": [
                     {
-                        "id": str(f.id),
-                        "phrase": str(f.phrase_number),
+                        "id": f.id,
+                        "phrase": getattr(f, "phrase", getattr(f, "phrase_number", 0)),
                         "note": f.note,
                         "ready": f.ready,
                     }
                     for f in r.fixes
                 ],
                 "note": getattr(r, "note", ""),
-                "cheked": getattr(r, "checked", False),
+                "checked": getattr(r, "checked", False),
                 "timed": getattr(r, "timed", False),
                 "state": get_role_state(r),
-                "subtitle": getattr(r, "subtitle_url", None),
+                "subtitle": getattr(r, "srt_url", None),
                 "records": [
                     {
-                        "id": str(rec.id),
-                        "record_title": rec.title,
+                        "id": rec.id,
+                        "record_title": getattr(rec, "title", "Без названия"),
                         "record_note": getattr(rec, "analysis", ""),
-                        "record_url": rec.url,
+                        "record_url": getattr(rec, "url", ""),
                     }
                     for rec in r.records
                 ],
