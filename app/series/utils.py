@@ -295,7 +295,7 @@ def sanitize_filename(name: str) -> str:
 
 
 async def save_ass(ass_file: UploadFile, seria_id: int) -> str:
-    if not ass_file.filename.lower().endswith(".ass"):
+    if ass_file.filename is None or not ass_file.filename.lower().endswith(".ass"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Файл должен быть .ass"
         )
