@@ -4,6 +4,9 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.database import Base, get_db
 import enum
 
+from app.series.models import Series
+from app.users.models import User
+
 DELETED_USER_ID = -1
 
 
