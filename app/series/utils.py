@@ -1,3 +1,5 @@
+import re
+import uuid
 from typing import cast
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
@@ -6,14 +8,14 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.projects.models import Project as ProjectModel
+from app.projects.models import Project as ProjectModel, ProjectUser
 from app.projects.utils import AccessChecker
 from app.users.models import User as UserModel
 from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
-from .models import Series, Material, SeriesLink
-from ..roles.models import Role
+from .models import Series, Material, SeriesLink, AssFile
+from ..roles.models import Role, RoleState
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MEDIA_ROOT = BASE_DIR / "media"
@@ -235,3 +237,116 @@ class MaterialAccessChecker:
         await SeriesDataAccessChecker()(user=user, db_seria=db_seria, db=db)
 
         return db_material
+
+
+class SubsAccessChecker:
+    async def __call__(
+        self,
+        seria_id: int,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        db_seria = await db.get(Series, seria_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if not db_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+            )
+
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if user_level >= CURATOR_LEVEL:
+            return db_seria
+
+        if user.user_id == db_project.curator_id:
+            return db_seria
+
+        project_participant = await db.scalar(
+            select(ProjectUser).where(
+                ProjectUser.project_id == db_project.project_id,
+                ProjectUser.user_id == user.user_id,
+            )
+        )
+        if project_participant:
+            return db_seria
+
+        if user.user_id in db_seria.staff_ids:
+            return db_seria
+
+        actor_ids = (
+            await db.scalars(select(Role.user_id).where(Role.series_id == seria_id))
+        ).all()
+        if user.user_id in actor_ids:
+            return db_seria
+
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+
+class AssFixChecker:
+    async def __call__(
+        self, fix_id: int, db: AsyncSession = Depends(get_db)
+    ) -> AssFile:
+        db_fix = await db.get(AssFile, fix_id)
+        if not db_fix:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Фикс субтитров не найден.",
+            )
+        return db_fix
+
+
+class AssFixAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_fix: AssFile = Depends(AssFixChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> AssFile:
+        db_seria = await db.get(Series, db_fix.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+        await SubsAccessChecker()(seria_id=db_seria.id, user=user, db=db)
+        return db_fix
+
+
+def sanitize_filename(name: str) -> str:
+    return re.sub(r"[^\w\-]", "_", name)
+
+
+async def save_ass(ass_file: UploadFile, seria_id: int) -> str:
+    if ass_file.filename is None or not ass_file.filename.lower().endswith(".ass"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Файл должен быть .ass"
+        )
+
+    ass_dir = MEDIA_ROOT / "ass"
+    ass_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"seria_{seria_id}_{uuid.uuid4()}.ass"
+    file_path = ass_dir / filename
+    content = await ass_file.read()
+    file_path.write_bytes(content)
+
+    return f"/media/ass/{filename}"
+
+
+def compute_role_state(role: Role) -> RoleState:
+    if not role.records:
+        return RoleState.NOT_LOADED
+    if not role.timed:
+        return RoleState.NOT_TIMED
+    if not role.checked:
+        return RoleState.NOT_CHECKED
+    if role.fixes:
+        return RoleState.FIXES_NEED
+    return RoleState.MIXING_READY

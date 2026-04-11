@@ -2,9 +2,12 @@ from alembic.operations.toimpl import create_constraint
 from sqlalchemy import ForeignKey, Date, Text, Enum as SAenum
 from datetime import datetime, date, timezone
 from app.database import Base
+from app.projects.models import Project
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 import enum
+
+from app.roles.models import Role
 
 
 DELETED_USER_ID = -1
@@ -14,7 +17,7 @@ class SeriesState(str, enum.Enum):
     MATERIALS_PREPARATION = "подготовка материалов"
     VOICE_OVER = "озвучка"
     MIXING = "сведение"
-    CHECHING = "проверка"
+    CHECKING = "проверка"
     PUBLICATION = "публикация"
     COMPLETED = "завершено"
 
@@ -93,6 +96,12 @@ class Series(Base):
         cascade="all, delete-orphan",
     )
 
+    ass_fixes: Mapped[list["AssFile"]] = relationship(
+        "AssFile",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
     @property
     def staff_ids(self) -> list[int]:
         return [
@@ -143,4 +152,7 @@ class AssFile(Base):
     __tablename__ = "ass_fixes"
 
     fix_id: Mapped[int] = mapped_column(primary_key=True)
+    series_id: Mapped[int] = mapped_column(ForeignKey("series.id", ondelete="CASCADE"))
     fix_note: Mapped[str] = mapped_column()
+
+    series: Mapped["Series"] = relationship("Series", back_populates="ass_fixes")

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated, Optional
 
 from fastapi import (
@@ -33,6 +33,15 @@ from app.series.schemas import (
     MaterialCreateResponse,
     SeriesLinkCreate,
     SeriesLinkResponse,
+    SubsUpdateResponse,
+    AssFileSubsResponse,
+    AssFixItemResponse,
+    AssFixCreateRequest,
+    AssFixCreateResponse,
+    RoleSubsResponse,
+    ActorSubsResponse,
+    FixSubsResponse,
+    RecordSubsResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -43,17 +52,24 @@ from .utils import (
     MaterialAccessChecker,
     LinkAccessChecker,
     save_srt,
+    save_ass,
+    sanitize_filename,
     compute_dub_progress,
+    compute_role_state,
     get_series_participants,
     get_series_no_actors,
     SeriesAccessChecker,
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
+    SubsAccessChecker,
+    AssFixAccessChecker,
+    MEDIA_ROOT,
 )
-from .models import Series, Material, SeriesLink
+from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel
-from app.roles.models import Role, RoleState
+from app.roles.models import Role, RoleState, Fix
 from app.files.utils import save_file
+from .parser import ASSParser
 
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -129,9 +145,11 @@ async def get_user_work(
             work_type=r.work_type,
             role_is_ready=bool(r.role_is_ready),
             subs=r.ass_url is not None,
-            role=UserWorkRoleInfo(role_name=r.role_name, state=r.role_state)
-            if r.role_name is not None
-            else None,
+            role=(
+                UserWorkRoleInfo(role_name=r.role_name, state=r.role_state)
+                if r.role_name is not None
+                else None
+            ),
         )
         for r in rows
     ]
@@ -225,9 +243,9 @@ async def create_series(
 
 @router.get("/{series_id}")
 async def get_series_by_id(
-        series_id: int,
-        user: UserModel = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db),
+    series_id: int,
+    user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     # 1. Запрос со всеми необходимыми JOIN-ами
     query = (
@@ -251,22 +269,24 @@ async def get_series_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
-
     valid_staff_ids = [uid for uid in s.staff_ids if uid is not None and uid != -1]
 
     staff_map = {}
     if valid_staff_ids:
-        staff_users = await db.execute(select(UserModel).where(UserModel.user_id.in_(valid_staff_ids)))
+        staff_users = await db.execute(
+            select(UserModel).where(UserModel.user_id.in_(valid_staff_ids))
+        )
         staff_map = {u.user_id: u for u in staff_users.scalars().all()}
 
     def format_user(user_id):
         u = staff_map.get(user_id)
-        if not u: return None
+        if not u:
+            return None
         return {
             "user_id": str(u.user_id),
             "nickname": u.nickname,
             "avatar_url": u.avatar_url,
-            "is_active": u.is_active
+            "is_active": u.is_active,
         }
 
     def format_date(d: date):
@@ -275,9 +295,9 @@ async def get_series_by_id(
     def get_role_state(role):
         if not role.records:
             return "не загружена"
-        if not getattr(role, 'timed', True):
+        if not getattr(role, "timed", True):
             return "не затаймлена"
-        if not getattr(role, 'checked', True):
+        if not getattr(role, "checked", True):
             return "не проверена"
         if role.fixes and any(not f.ready for f in role.fixes):
             return "требуются фиксы"
@@ -288,7 +308,9 @@ async def get_series_by_id(
         "project": {
             "project_id": str(s.project.project_id),
             "project_title": s.project.title,
-            "project_curator_id": str(s.project.curator_id) if hasattr(s.project, 'curator_id') else None,
+            "project_curator_id": (
+                str(s.project.curator_id) if hasattr(s.project, "curator_id") else None
+            ),
             "project_image_url": s.project.image_url,
         },
         "seria_title": s.title,
@@ -297,24 +319,19 @@ async def get_series_by_id(
         "second_stage_date": format_date(s.second_deadline),
         "publication_date": format_date(s.exp_publish_date),
         "note": s.note,
-        "state": s.state.value if hasattr(s.state, 'value') else s.state,
+        "state": s.state.value if hasattr(s.state, "value") else s.state,
         "materials": [
             {
                 "id": str(m.id),
                 "material_title": m.material_title,
-                "material_link": m.material_link
-            } for m in s.materials
+                "material_link": m.material_link,
+            }
+            for m in s.materials
         ],
-        "ass_file": {
-            "ass_file_url": s.ass_url,
-            "ass_fixes": []
-        },
+        "ass_file": {"ass_file_url": s.ass_url, "ass_fixes": []},
         "links": [
-            {
-                "id": str(l.id),
-                "link_title": l.link_title,
-                "link_url": l.link_url
-            } for l in s.links
+            {"id": str(l.id), "link_title": l.link_title, "link_url": l.link_url}
+            for l in s.links
         ],
         "no_actors": {
             "curator": format_user(s.curator),
@@ -322,7 +339,7 @@ async def get_series_by_id(
             "raw_sound_engineer": format_user(s.raw_sound_engineer),
             "director": format_user(s.director),
             "timer": format_user(s.timer),
-            "subtitler": format_user(s.translator)
+            "subtitler": format_user(s.translator),
         },
         "roles": [
             {
@@ -332,31 +349,34 @@ async def get_series_by_id(
                     "user_id": str(r.user.user_id) if r.user else None,
                     "nickname": r.user.nickname if r.user else "Удаленный пользователь",
                     "avatar_url": r.user.avatar_url if r.user else None,
-                    "is_active": r.user.is_active if r.user else False
+                    "is_active": r.user.is_active if r.user else False,
                 },
                 "fixes": [
                     {
                         "id": str(f.id),
                         "phrase": str(f.phrase_number),
                         "note": f.note,
-                        "ready": f.ready
-                    } for f in r.fixes
+                        "ready": f.ready,
+                    }
+                    for f in r.fixes
                 ],
-                "note": getattr(r, 'note', ""),
-                "cheked": getattr(r, 'checked', False),
-                "timed": getattr(r, 'timed', False),
+                "note": getattr(r, "note", ""),
+                "cheked": getattr(r, "checked", False),
+                "timed": getattr(r, "timed", False),
                 "state": get_role_state(r),
-                "subtitle": getattr(r, 'subtitle_url', None),
+                "subtitle": getattr(r, "subtitle_url", None),
                 "records": [
                     {
                         "id": str(rec.id),
                         "record_title": rec.title,
-                        "record_note": getattr(rec, 'analysis', ""),
-                        "record_url": rec.url
-                    } for rec in r.records
-                ]
-            } for r in s.roles
-        ]
+                        "record_note": getattr(rec, "analysis", ""),
+                        "record_url": rec.url,
+                    }
+                    for rec in r.records
+                ],
+            }
+            for r in s.roles
+        ],
     }
 
 
@@ -383,7 +403,9 @@ async def update_series_no_actors(
     if incoming_user_ids:
         existing_ids = set(
             await db.scalars(
-                select(UserModel.user_id).where(UserModel.user_id.in_(incoming_user_ids))
+                select(UserModel.user_id).where(
+                    UserModel.user_id.in_(incoming_user_ids)
+                )
             )
         )
         missing = incoming_user_ids - existing_ids
@@ -546,6 +568,217 @@ async def delete_material(
     await db.commit()
 
     return "Материал успешно удалён"
+
+
+@router.put("/{seria_id}/subs", response_model=SubsUpdateResponse)
+async def update_series_subs(
+    seria_id: int,
+    parse_type: Annotated[str, Form()],
+    ass_file: UploadFile,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[Series, Depends(SubsAccessChecker())],
+) -> SubsUpdateResponse:
+    """
+    Загружает/обновляет ASS-файл серии, парсит роли и создаёт/обновляет их.
+    parse_type: "name" — роли из поля Name, "style" — из поля Style.
+    """
+    db_seria = await db.scalar(
+        select(Series)
+        .where(Series.id == seria_id)
+        .options(
+            selectinload(Series.project).selectinload(ProjectModel.roles),
+            selectinload(Series.roles).selectinload(Role.user),
+            selectinload(Series.roles).selectinload(Role.fixes),
+            selectinload(Series.roles).selectinload(Role.records),
+        )
+    )
+
+    if db_seria is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+        )
+
+    ass_url = await save_ass(ass_file, seria_id)
+    db_seria.ass_url = ass_url
+
+    ass_full_path = MEDIA_ROOT.parent / ass_url.lstrip("/")
+    use_name = parse_type.lower() != "style"
+    parser = ASSParser(filename=str(ass_full_path), use_name=use_name)
+    parser.load()
+
+    project_roles_lookup: dict[str, int] = {
+        pr.role_title.lower(): pr.user_id for pr in db_seria.project.roles
+    }
+
+    existing_roles: dict[str, Role] = {r.role_name.lower(): r for r in db_seria.roles}
+
+    project_title = db_seria.project.title
+    series_title = db_seria.title
+    now = datetime.now()
+
+    for role_name in parser.roles:
+        safe_base = sanitize_filename(f"{project_title}_{series_title}_{role_name}")
+        srt_filename = f"{safe_base}.srt"
+        srt_path = MEDIA_ROOT / "srt" / srt_filename
+        srt_url = f"/media/srt/{srt_filename}"
+
+        new_srt_content = parser.get_role_content(
+            role_name,
+            project_description=project_title,
+            series_description=series_title,
+            output_format="srt",
+        )
+
+        role_lower = role_name.lower()
+
+        if role_lower in existing_roles:
+            existing_role = existing_roles[role_lower]
+
+            old_full_path = MEDIA_ROOT.parent / existing_role.srt_url.lstrip("/")
+            old_content = (
+                old_full_path.read_text("utf-8") if old_full_path.exists() else ""
+            )
+
+            if old_content != new_srt_content:
+                srt_path.parent.mkdir(parents=True, exist_ok=True)
+                srt_path.write_text(new_srt_content, "utf-8")
+                existing_role.srt_url = srt_url
+                existing_role.checked = False
+
+                db.add(
+                    Fix(
+                        role_id=existing_role.role_id,
+                        phrase=0,
+                        note=f"был обновлён srt файл {now.strftime('%d.%m.%Y %H:%M')}",
+                        ready=False,
+                    )
+                )
+                db.add(
+                    AssFile(series_id=seria_id, fix_note=f"Обновлена роль: {role_name}")
+                )
+        else:
+            srt_path.parent.mkdir(parents=True, exist_ok=True)
+            srt_path.write_text(new_srt_content, "utf-8")
+
+            actor_user_id = project_roles_lookup.get(role_lower, -1)
+
+            db.add(
+                Role(
+                    role_name=role_name,
+                    series_id=seria_id,
+                    user_id=actor_user_id,
+                    srt_url=srt_url,
+                    checked=False,
+                    timed=False,
+                    state=RoleState.NOT_LOADED,
+                )
+            )
+            db.add(AssFile(series_id=seria_id, fix_note=f"Добавлена роль: {role_name}"))
+
+    await db.commit()
+
+    # Reading roles and fixes again to get non-touched ones and updated fixes
+    all_roles = (
+        await db.scalars(
+            select(Role)
+            .where(Role.series_id == seria_id)
+            .options(
+                selectinload(Role.user),
+                selectinload(Role.fixes),
+                selectinload(Role.records),
+            )
+        )
+    ).all()
+
+    all_ass_fixes = (
+        await db.scalars(select(AssFile).where(AssFile.series_id == seria_id))
+    ).all()
+
+    roles_response = [
+        RoleSubsResponse(
+            id=role.role_id,
+            role_name=role.role_name,
+            actor=(
+                ActorSubsResponse(
+                    user_id=role.user.user_id,
+                    nickname=role.user.nickname,
+                    avatar_url=role.user.avatar_url,
+                    is_active=role.user.is_active,
+                )
+                if role.user is not None and role.user.user_id != -1
+                else None
+            ),
+            fixes=[
+                FixSubsResponse(id=f.id, phrase=f.phrase, note=f.note, ready=f.ready)
+                for f in role.fixes
+            ],
+            note=role.note,
+            checked=role.checked,
+            timed=role.timed,
+            state=compute_role_state(role).value,
+            subtitle=role.srt_url,
+            records=[
+                RecordSubsResponse(
+                    id=rec.id,
+                    record_title=rec.record_prev_title,
+                    record_note=None,
+                    record_url=rec.record_url,
+                )
+                for rec in role.records
+            ],
+        )
+        for role in all_roles
+    ]
+
+    return SubsUpdateResponse(
+        ass_file=AssFileSubsResponse(
+            ass_file_url=ass_url,
+            ass_fixes=[
+                AssFixItemResponse(fix_id=af.fix_id, fix_note=af.fix_note)
+                for af in all_ass_fixes
+            ],
+        ),
+        roles=roles_response,
+    )
+
+
+@router.post(
+    "/{seria_id}/subs/fix",
+    response_model=AssFixCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_subs_fix(
+    data: AssFixCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SubsAccessChecker())],
+) -> AssFile:
+    db_fix = AssFile(series_id=db_seria.id, fix_note=data.fix_note)
+    db.add(db_fix)
+    await db.commit()
+    await db.refresh(db_fix)
+    return db_fix
+
+
+@router.patch("/subs/fix/{fix_id}", response_model=AssFixCreateResponse)
+async def update_subs_fix(
+    data: AssFixCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[AssFile, Depends(AssFixAccessChecker())],
+) -> AssFile:
+    db_fix.fix_note = data.fix_note
+    await db.commit()
+    await db.refresh(db_fix)
+    return db_fix
+
+
+@router.delete("/subs/fix/{fix_id}", response_model=str)
+async def delete_subs_fix(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[AssFile, Depends(AssFixAccessChecker())],
+) -> str:
+    await db.delete(db_fix)
+    await db.commit()
+    return "Фикс субтитров успешно удалён"
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)
