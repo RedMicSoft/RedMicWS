@@ -47,6 +47,8 @@ from app.series.schemas import (
     ActorCreateResponse,
     RoleActorUpdate,
     RoleActorResponse,
+    RoleStateUpdate,
+    RoleStateResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -69,6 +71,7 @@ from .utils import (
     SeriesRoleCreateAccessChecker,
     SeriesRoleDeleteAccessChecker,
     SeriesRoleActorSetAccessChecker,
+    SeriesRoleStateAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
@@ -935,6 +938,39 @@ async def set_role_actor(
         user_id=actor.user_id,
         nickname=actor.nickname,
         avatar_url=actor.avatar_url,
+    )
+
+
+@router.patch("/role/{role_id}/state", response_model=RoleStateResponse)
+async def update_role_state(
+    data: RoleStateUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleStateAccessChecker())],
+) -> RoleStateResponse:
+    if data.checked is not None:
+        db_role.checked = data.checked
+    if data.timed is not None:
+        db_role.timed = data.timed
+    await db.flush()
+
+    role_full = await db.scalar(
+        select(Role)
+        .where(Role.role_id == db_role.role_id)
+        .options(selectinload(Role.records), selectinload(Role.fixes))
+    )
+    if role_full is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    new_state = compute_role_state(role_full)
+    db_role.state = new_state
+    await db.commit()
+
+    return RoleStateResponse(
+        checked=db_role.checked,
+        timed=db_role.timed,
+        state=new_state.value,
     )
 
 

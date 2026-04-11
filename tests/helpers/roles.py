@@ -8,7 +8,7 @@ from app.projects.models import ProjectRoleHistory
 from app.series.models import Series
 from tests.conftest import TestSession
 from tests.helpers import _uid
-from app.roles.models import Role
+from app.roles.models import Role, Record
 
 
 async def post_role(
@@ -112,3 +112,49 @@ async def put_role_actor(
     request.addfinalizer(lambda: asyncio.run(_delete_history()))
 
     return result
+
+
+async def patch_role_state(
+    client: AsyncClient,
+    role_id: int,
+    headers: dict,
+    **kwargs,
+) -> Response:
+    """PATCH /series/role/{role_id}/state with optional checked= and/or timed= kwargs."""
+    return await client.patch(
+        f"/series/role/{role_id}/state",
+        json=kwargs,
+        headers=headers,
+    )
+
+
+async def create_record(
+    role_id: int,
+    request: pytest.FixtureRequest | None = None,
+    record_url: str | None = None,
+    record_prev_title: str | None = None,
+) -> Record:
+    """Create a Record for a role directly in the test DB."""
+    async with TestSession() as s:
+        record = Record(
+            role_id=role_id,
+            record_url=record_url or f"/media/{_uid()}.wav",
+            record_prev_title=record_prev_title or f"{_uid()}.wav",
+        )
+        s.add(record)
+        await s.commit()
+        await s.refresh(record)
+
+    if request is not None:
+        record_id = record.id
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_record = await s.get(Record, record_id)
+                if db_record:
+                    await s.delete(db_record)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return record

@@ -289,3 +289,14 @@ class RoleActorResponse(BaseModel):
     user_id: int | None
     nickname: str | None
     avatar_url: str | None
+
+
+class RoleStateUpdate(BaseModel):
+    checked: bool | None = None
+    timed: bool | None = None
+
+
+class RoleStateResponse(BaseModel):
+    checked: bool
+    timed: bool
+    state: str
