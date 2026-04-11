@@ -157,6 +157,36 @@ async def put_role_subtitle(
     return response
 
 
+async def post_role_record(
+    client: AsyncClient,
+    role_id: int,
+    headers: dict,
+    record_title: str = "test.wav",
+    content: bytes = b"RIFF\x00\x00\x00\x00WAVEfmt ",
+    request: pytest.FixtureRequest | None = None,
+) -> Response:
+    """POST /series/role/{role_id}/records. Registers Record cleanup when request is given."""
+    response = await client.post(
+        f"/series/role/{role_id}/records",
+        data={"record_title": record_title},
+        files={"record_file": (record_title, content, "audio/wav")},
+        headers=headers,
+    )
+    if request is not None and response.is_success:
+        record_id = response.json()["record"]["id"]
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_record = await s.get(Record, record_id)
+                if db_record:
+                    await s.delete(db_record)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return response
+
+
 async def create_record(
     role_id: int,
     request: pytest.FixtureRequest | None = None,

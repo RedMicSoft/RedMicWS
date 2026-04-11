@@ -51,6 +51,8 @@ from app.series.schemas import (
     RoleStateResponse,
     RoleSubtitleFixResponse,
     RoleSubtitleResponse,
+    RecordItemResponse,
+    RecordAddResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -74,15 +76,17 @@ from .utils import (
     SeriesRoleActorSetAccessChecker,
     SeriesRoleStateAccessChecker,
     SeriesRoleSubtitleAccessChecker,
+    SeriesRoleRecordAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
     SUBS_ROOT,
     save_srt_content,
+    save_record,
 )
 from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel, ProjectRoleHistory
-from app.roles.models import Role, RoleState, Fix
+from app.roles.models import Role, RoleState, Fix, Record
 from app.files.utils import save_file
 from .parser import ASSParser
 
@@ -1035,6 +1039,54 @@ async def update_role_subtitle(
             RoleSubtitleFixResponse(id=f.id, phrase=f.phrase, note=f.note, ready=f.ready)
             for f in role_full.fixes
         ],
+    )
+
+
+@router.post(
+    "/role/{role_id}/records",
+    response_model=RecordAddResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_role_record(
+    record_title: Annotated[str, Form()],
+    record_file: UploadFile,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleRecordAccessChecker())],
+) -> RecordAddResponse:
+    record_url = await save_record(record_file, record_title)
+
+    db_record = Record(
+        role_id=db_role.role_id,
+        record_url=record_url,
+        record_prev_title=record_title,
+        record_note=None,
+    )
+    db.add(db_record)
+    await db.flush()
+
+    role_full = await db.scalar(
+        select(Role)
+        .where(Role.role_id == db_role.role_id)
+        .options(selectinload(Role.records), selectinload(Role.fixes))
+    )
+    if role_full is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    new_state = compute_role_state(role_full)
+    db_role.state = new_state
+    await db.commit()
+    await db.refresh(db_record)
+
+    return RecordAddResponse(
+        record=RecordItemResponse(
+            id=db_record.id,
+            record_title=db_record.record_prev_title,
+            record_note=db_record.record_note,
+            record_url=db_record.record_url,
+        ),
+        state=new_state.value,
     )
 
 

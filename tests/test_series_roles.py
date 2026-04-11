@@ -21,6 +21,7 @@ from tests.helpers.roles import (
     create_role,
     patch_role_state,
     post_role,
+    post_role_record,
     put_role_actor,
     put_role_subtitle,
 )
@@ -1213,3 +1214,253 @@ async def test_update_subtitle_returns_full_fix_list(
     phrases = {f["phrase"] for f in body["fixes"]}
     assert 0 in phrases
     assert 5 in phrases
+
+
+# ===========================================================================
+# POST /series/role/{role_id}/records
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_add_record_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.post(
+        "/series/role/9999/records",
+        data={"record_title": "test.wav"},
+        files={"record_file": ("test.wav", b"data", "audio/wav")},
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_role_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая роль → 404."""
+    response = await post_role_record(client, 9999999, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403
+# ---------------------------------------------------------------------------
+
+
+async def test_add_record_forbidden_for_unrelated_member(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    stranger, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, stranger.nickname)
+
+    response = await post_role_record(client, role.role_id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 400 — invalid file format
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_invalid_format(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Файл не wav/flac/mp3 → 400."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_record(
+        client,
+        role.role_id,
+        auth_headers,
+        record_title="audio.ogg",
+        content=b"data",
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by level >= 2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может добавить запись."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_record(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    body = response.json()
+    assert "record" in body
+    assert body["record"]["record_title"] == "test.wav"
+    assert body["record"]["record_url"].startswith("/records/")
+    assert body["record"]["record_note"] is None
+    assert "state" in body
+    # Роль перешла из NOT_LOADED → NOT_TIMED (нет тайминга)
+    assert body["state"] == "не затаймлена"
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by project curator (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_add_record_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может добавить запись."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, curator.nickname)
+
+    response = await post_role_record(client, role.role_id, headers, request=request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by no_actor (series staff)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_add_record_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник из no_actors (напр. sound_engineer серии) может добавить запись."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    staff_member, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(
+        project.project_id,
+        request,
+        **{staff_field: staff_member.user_id},
+    )
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, staff_member.nickname)
+
+    response = await post_role_record(client, role.role_id, headers, request=request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by role actor (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_add_record_success_by_role_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр роли (уровень 1) может добавить запись в свою роль."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=actor.user_id, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await post_role_record(client, role.role_id, headers, request=request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    body = response.json()
+    assert body["state"] == "не затаймлена"
+
+
+async def test_add_record_actor_cannot_upload_to_other_role(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр одной роли не может добавить запись в чужую роль."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    # Роль назначена другому актёру (None — не назначена)
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await post_role_record(client, role.role_id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# State transitions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_state_not_loaded_to_not_timed(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Первая запись переводит роль из NOT_LOADED → NOT_TIMED."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=False, checked=False
+    )
+
+    response = await post_role_record(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["state"] == "не затаймлена"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_supports_flac_and_mp3(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Файлы .flac и .mp3 принимаются."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    for filename in ("audio.flac", "audio.mp3"):
+        role = await create_role(series.id, user_id=None, request=request)
+        response = await post_role_record(
+            client,
+            role.role_id,
+            auth_headers,
+            record_title=filename,
+            content=b"\x00" * 16,
+            request=request,
+        )
+        assert response.status_code == status.HTTP_201_CREATED, f"Failed for {filename}"
+        assert response.json()["record"]["record_url"].endswith(
+            filename.rsplit(".", 1)[-1]
+        ), f"URL should end with extension for {filename}"

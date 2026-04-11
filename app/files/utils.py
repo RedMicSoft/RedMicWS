@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from fastapi import HTTPException, status
 from pathlib import Path
 from fastapi import UploadFile
@@ -10,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from urllib.parse import quote
 
 from app.files.models import FileModel
+from app.roles.models import Record
 from app.database import async_session_maker
 
 FILES_DIR = Path(__file__).resolve().parent.parent.parent / "team_files"
@@ -17,6 +20,11 @@ FILES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 async def save_file(file: UploadFile):
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Файл не выбран."
+        )
+
     prev_filename = file.filename
     filename = f'{uuid.uuid4()}.{file.filename.split(".")[-1]}'
     file_path = FILES_DIR / filename
@@ -36,19 +44,29 @@ class CustomStaticFiles(StaticFiles):
 
             return Response("Файл не найден.", status_code=404)
 
+        prev_filename = await self._get_original_file_name(path)
+        if hasattr(response, "headers"):
+            encoded_filename = quote(prev_filename)
+            response.headers["Content-Disposition"] = (
+                f"attachment; filename*=utf-8''{encoded_filename}"
+            )
+
+        print(f"Успешно, новое имя файла: {prev_filename}")
+        return response
+
+    @abstractmethod
+    async def _get_original_file_name(self, path: str) -> str:
+        pass
+
+
+class TeamStaticFiles(CustomStaticFiles):
+    async def _get_original_file_name(self, path: str) -> str:
         full_db_path = f"/team_files/{path}"
         async with async_session_maker() as db:
             file = await db.scalar(
                 select(FileModel).where(FileModel.file_url == full_db_path)
             )
-        if hasattr(response, "headers"):
-            encoded_filename = quote(file.prev_filename)
-            response.headers["Content-Disposition"] = (
-                f"attachment; filename*=utf-8''{encoded_filename}"
-            )
-
-        print(f"Успешно, новое имя файла: {file.prev_filename}")
-        return response
+        return file.prev_filename if file and file.prev_filename else Path(path).name
 
 
 class SubsStaticFiles(StaticFiles):
@@ -68,6 +86,20 @@ class SubsStaticFiles(StaticFiles):
             )
 
         return response
+
+
+class RecordsStaticFiles(CustomStaticFiles):
+    async def _get_original_file_name(self, path: str) -> str:
+        full_db_path = f"/records/{path}"
+        async with async_session_maker() as db:
+            file = await db.scalar(
+                select(Record).where(Record.record_url == full_db_path)
+            )
+        return (
+            file.record_prev_title
+            if file and file.record_prev_title
+            else Path(path).name
+        )
 
 
 async def file_delete(filename: str):

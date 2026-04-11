@@ -16,6 +16,7 @@ from fastapi import status
 Path("media").mkdir(exist_ok=True)
 Path("team_files").mkdir(exist_ok=True)
 Path("subs").mkdir(exist_ok=True)
+Path("records").mkdir(exist_ok=True)
 
 from app.database import Base, get_db
 from app.main import app

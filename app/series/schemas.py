@@ -316,3 +316,17 @@ class RoleSubtitleResponse(BaseModel):
     state: str
     checked: bool
     fixes: list[RoleSubtitleFixResponse]
+
+
+class RecordItemResponse(BaseModel):
+    id: int
+    record_title: str
+    record_note: str | None
+    record_url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecordAddResponse(BaseModel):
+    record: RecordItemResponse
+    state: str

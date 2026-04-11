@@ -79,6 +79,7 @@ class Record(Base):
     )
     record_url: Mapped[str] = mapped_column()
     record_prev_title: Mapped[str] = mapped_column()
+    record_note: Mapped[str | None] = mapped_column()
 
     role: Mapped["Role"] = relationship("Role", back_populates="records")
 

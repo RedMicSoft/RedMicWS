@@ -20,6 +20,8 @@ from ..roles.models import Role, RoleState
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SUBS_ROOT = BASE_DIR / "subs"
 SUBS_ROOT.mkdir(parents=True, exist_ok=True)
+RECORDS_ROOT = BASE_DIR / "records"
+RECORDS_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def generate_srt_filename(project_title: str, seria_title: str, role_name: str) -> str:
@@ -475,6 +477,67 @@ async def save_ass(
     file_path.write_bytes(content)
 
     return f"/subs/ass/{filename}"
+
+
+ALLOWED_RECORD_EXTENSIONS = {".wav", ".flac", ".mp3"}
+
+
+def generate_record_filename(record_title: str) -> str:
+    ext = Path(record_title).suffix.lower()
+    return f"{uuid.uuid4()}{ext}"
+
+
+async def save_record(record_file: UploadFile, record_title: str) -> str:
+    ext = Path(record_title).suffix.lower()
+    if ext not in ALLOWED_RECORD_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Файл должен быть wav, flac или mp3",
+        )
+    filename = generate_record_filename(record_title)
+    file_path = RECORDS_ROOT / filename
+    content = await record_file.read()
+    file_path.write_bytes(content)
+    return f"/records/{filename}"
+
+
+class SeriesRoleRecordAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_role: Role = Depends(RoleChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Role:
+        db_seria = await db.get(Series, db_role.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if not db_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+            )
+
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if user_level >= CURATOR_LEVEL:
+            return db_role
+
+        if user.user_id == db_project.curator_id:
+            return db_role
+
+        if user.user_id in db_seria.staff_ids:
+            return db_role
+
+        if user.user_id == db_role.user_id:
+            return db_role
+
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
 
 
 def compute_role_state(role: Role) -> RoleState:
