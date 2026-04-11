@@ -45,6 +45,8 @@ from app.series.schemas import (
     RoleCreateRequest,
     RoleCreateResponse,
     ActorCreateResponse,
+    RoleActorUpdate,
+    RoleActorResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -66,13 +68,14 @@ from .utils import (
     SeriesNoActorsAccessChecker,
     SeriesRoleCreateAccessChecker,
     SeriesRoleDeleteAccessChecker,
+    SeriesRoleActorSetAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
     SUBS_ROOT,
 )
 from .models import Series, Material, SeriesLink, AssFile
-from app.projects.models import Project as ProjectModel
+from app.projects.models import Project as ProjectModel, ProjectRoleHistory
 from app.roles.models import Role, RoleState, Fix
 from app.files.utils import save_file
 from .parser import ASSParser
@@ -882,6 +885,57 @@ async def delete_series_role(
     await db.delete(db_role)
     await db.commit()
     return "Роль успешно удалена из серии"
+
+
+@router.put("/role/{role_id}/actor", response_model=RoleActorResponse)
+async def set_role_actor(
+    data: RoleActorUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleActorSetAccessChecker())],
+) -> RoleActorResponse:
+    if data.actor_id is None:
+        db_role.user_id = null()
+        await db.commit()
+        return RoleActorResponse(user_id=None, nickname=None, avatar_url=None)
+
+    actor = await db.get(UserModel, data.actor_id)
+    if actor is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден."
+        )
+
+    db_role.user_id = data.actor_id
+
+    db_seria = await db.get(Series, db_role.series_id)
+    if db_seria is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+        )
+
+    project_role_history_entry = await db.scalar(
+        select(ProjectRoleHistory).where(
+            ProjectRoleHistory.project_id == db_seria.project_id,
+            ProjectRoleHistory.role_title.ilike(db_role.role_name),
+        )
+    )
+    if project_role_history_entry is None:
+        project_role_history_entry = ProjectRoleHistory(
+            project_id=db_seria.project_id,
+            role_title=db_role.role_name,
+            user_id=data.actor_id,
+            image_url="",
+        )
+        db.add(project_role_history_entry)
+    else:
+        project_role_history_entry.user_id = data.actor_id
+
+    await db.commit()
+
+    return RoleActorResponse(
+        user_id=actor.user_id,
+        nickname=actor.nickname,
+        avatar_url=actor.avatar_url,
+    )
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -279,3 +279,13 @@ class RoleCreateResponse(BaseModel):
     state: str
     subtitle: str | None
     records: None = None
+
+
+class RoleActorUpdate(BaseModel):
+    actor_id: int | None
+
+
+class RoleActorResponse(BaseModel):
+    user_id: int | None
+    nickname: str | None
+    avatar_url: str | None

@@ -32,7 +32,7 @@ async def create_user(request: pytest.FixtureRequest | None = None) -> User:
                 db_user = await s.get(User, user_id)
                 if db_user:
                     await s.delete(db_user)
-                await s.commit()
+                    await s.commit()
 
         request.addfinalizer(lambda: asyncio.run(_delete()))
 

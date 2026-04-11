@@ -4,15 +4,19 @@ Tests for series role endpoints:
   DELETE /series/role/{role_id}
 """
 
+import asyncio
+
 import pytest
 from httpx import AsyncClient
 from fastapi import status
+from sqlalchemy import select
 
+from app.projects.models import ProjectRoleHistory
 from tests.conftest import TestSession
-from tests.helpers.users import create_user_with_level, login_user
+from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project, create_project_role
 from tests.helpers.series import create_series
-from tests.helpers.roles import create_role, post_role
+from tests.helpers.roles import create_role, post_role, put_role_actor
 from app.roles.models import Role
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
@@ -378,3 +382,282 @@ async def test_delete_role_success_by_series_curator(
 
     async with TestSession() as s:
         assert await s.get(Role, role.role_id) is None
+
+
+# ===========================================================================
+# PUT /series/role/{role_id}/actor
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_set_role_actor_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.put("/series/role/9999/actor", json={"actor_id": 1})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_role_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая роль → 404."""
+    response = await put_role_actor(client, 9999999, 1, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_user_not_found(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Несуществующий актёр → 404."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    response = await put_role_actor(
+        client, role.role_id, 9999999, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403 — forbidden
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_set_role_actor_forbidden_for_plain_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_set_role_actor_ok_for_series_curator(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор серии (уровень 1) имеет доступ."""
+    series_curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project_owner, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=project_owner.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, curator=series_curator.user_id
+    )
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+    headers = await login_user(client, series_curator.nickname)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# 200 — success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может установить актёра."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert body["user_id"] == actor.user_id
+    assert body["nickname"] == actor.nickname
+
+
+async def test_set_role_actor_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может установить актёра."""
+    project_curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert body["user_id"] == actor.user_id
+    assert body["nickname"] == actor.nickname
+
+
+async def test_set_role_actor_success_by_series_director(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Режиссёр серии (уровень 1) может установить актёра."""
+    director, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project_owner, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=project_owner.user_id, request=request)
+    series = await create_series(project.project_id, request, director=director.user_id)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+    headers = await login_user(client, director.nickname)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert body["user_id"] == actor.user_id
+    assert body["nickname"] == actor.nickname
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит user_id, nickname, avatar_url."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert set(body.keys()) == {"user_id", "nickname", "avatar_url"}
+
+
+# ---------------------------------------------------------------------------
+# ProjectRoleHistory tracking
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_creates_project_role_history(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Если роль отсутствует в ProjectRoleHistory — запись создаётся."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    async with TestSession() as s:
+        history = await s.scalar(
+            select(ProjectRoleHistory).where(
+                ProjectRoleHistory.project_id == project.project_id,
+                ProjectRoleHistory.role_title.ilike(role.role_name),
+            )
+        )
+
+    assert history is not None
+    assert history.user_id == actor.user_id
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_assigns_unassigned_project_role_history(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Если роль присутствует, но не назначена (user_id=-1) — назначается актёр."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    actor = await create_user(request)
+
+    await create_project_role(
+        project_id=project.project_id,
+        user_id=-1,
+        role_title=role.role_name,
+        request=request,
+    )
+
+    response = await put_role_actor(
+        client, role.role_id, actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    async with TestSession() as s:
+        history = await s.scalar(
+            select(ProjectRoleHistory).where(
+                ProjectRoleHistory.project_id == project.project_id,
+                ProjectRoleHistory.role_title.ilike(role.role_name),
+            )
+        )
+
+    assert history is not None
+    assert history.user_id == actor.user_id
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_actor_replaces_project_role_history(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Если роль уже назначена в ProjectRoleHistory — актёр заменяется."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    first_actor = await create_user(request)
+    second_actor = await create_user(request)
+
+    await create_project_role(
+        project_id=project.project_id,
+        user_id=first_actor.user_id,
+        role_title=role.role_name,
+        request=request,
+    )
+
+    response = await put_role_actor(
+        client, role.role_id, second_actor.user_id, auth_headers, request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    async with TestSession() as s:
+        history = await s.scalar(
+            select(ProjectRoleHistory).where(
+                ProjectRoleHistory.project_id == project.project_id,
+                ProjectRoleHistory.role_title.ilike(role.role_name),
+            )
+        )
+
+    assert history is not None
+    assert history.user_id == second_actor.user_id

@@ -351,6 +351,35 @@ class SeriesRoleDeleteAccessChecker:
         return db_role
 
 
+class SeriesRoleActorSetAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_role: Role = Depends(RoleChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Role:
+        db_seria = await db.get(Series, db_role.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if not db_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+            )
+
+        if user.user_id == db_seria.director:
+            return db_role
+
+        await SeriesRoleCreateAccessChecker()(
+            seria_id=db_role.series_id, user=user, db=db
+        )
+
+        return db_role
+
+
 class AssFixChecker:
     async def __call__(
         self, fix_id: int, db: AsyncSession = Depends(get_db)

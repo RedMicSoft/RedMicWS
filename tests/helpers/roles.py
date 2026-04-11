@@ -1,8 +1,11 @@
 import asyncio
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
+from sqlalchemy import select
 
+from app.projects.models import ProjectRoleHistory
+from app.series.models import Series
 from tests.conftest import TestSession
 from tests.helpers import _uid
 from app.roles.models import Role
@@ -68,3 +71,44 @@ async def create_role(
         request.addfinalizer(lambda: asyncio.run(_delete()))
 
     return role
+
+
+async def put_role_actor(
+    client: AsyncClient,
+    role_id: int,
+    actor_id: int,
+    headers: dict,
+    request: pytest.FixtureRequest | None = None,
+) -> Response:
+    result = await client.put(
+        f"/series/role/{role_id}/actor",
+        json={"actor_id": actor_id},
+        headers=headers,
+    )
+
+    if not result.is_success or request is None:
+        return result
+
+    async def _delete_history() -> None:
+        async with TestSession() as s:
+            role = await s.get(Role, role_id)
+            if role is None:
+                return
+
+            series = await s.get(Series, role.series_id)
+            if series is None:
+                return
+
+            history = await s.scalar(
+                select(ProjectRoleHistory).where(
+                    ProjectRoleHistory.project_id == series.project_id,
+                    ProjectRoleHistory.role_title.ilike(role.role_name),
+                )
+            )
+            if history:
+                await s.delete(history)
+                await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_delete_history()))
+
+    return result
