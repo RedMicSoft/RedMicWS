@@ -1,9 +1,12 @@
+import asyncio
 from pathlib import Path
 
 import httpx
 import pytest
 from httpx import AsyncClient
 
+from app.database import async_session_maker
+from app.series.models import AssFile
 from app.series.utils import MEDIA_ROOT
 
 
@@ -21,6 +24,40 @@ def cleanup_response_files(response_json: dict) -> None:
         path = MEDIA_ROOT.parent / url.lstrip("/")
         if path.exists():
             path.unlink()
+
+
+async def _delete_ass_fix(fix_id: int) -> None:
+    from tests.conftest import TestSession
+
+    async with TestSession() as s:
+        db_fix = await s.get(AssFile, fix_id)
+        if db_fix:
+            await s.delete(db_fix)
+        await s.commit()
+
+
+async def subs_fix_post(
+    client: AsyncClient,
+    seria_id: int,
+    fix_note: str,
+    headers: dict,
+    request: pytest.FixtureRequest | None = None,
+) -> httpx.Response:
+    """
+    Отправляет POST /series/{seria_id}/subs/fix.
+
+    Если передан request и ответ успешный (2xx), автоматически регистрирует
+    через addfinalizer удаление созданной AssFile-записи.
+    """
+    response = await client.post(
+        f"/series/{seria_id}/subs/fix",
+        json={"fix_note": fix_note},
+        headers=headers,
+    )
+    if request is not None and response.is_success:
+        fix_id = response.json()["fix_id"]
+        request.addfinalizer(lambda: asyncio.run(_delete_ass_fix(fix_id)))
+    return response
 
 
 async def subs_put(

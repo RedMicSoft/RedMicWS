@@ -1,5 +1,5 @@
 """
-Tests for PUT /series/{seria_id}/subs
+Tests for PUT /series/{seria_id}/subs and POST /series/{seria_id}/subs/fix
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from tests.helpers.users import create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series
 from tests.helpers.roles import create_role
-from tests.helpers.subs import subs_put
+from tests.helpers.subs import subs_put, subs_fix_post
 from app.projects.models import ProjectUser
 from app.roles.models import Fix, Role
 from app.series.utils import MEDIA_ROOT
@@ -433,3 +433,140 @@ async def test_subs_access_series_actor(
 
     response = await subs_put(client, series.id, _BY_NAME, "name", headers, request)
     assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# POST /series/{seria_id}/subs/fix
+# ---------------------------------------------------------------------------
+
+
+async def test_subs_fix_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await subs_fix_post(client, 9999, "текст фикса", {})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_fix_series_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая серия → 404."""
+    response = await subs_fix_post(client, 9999999, "текст фикса", auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_subs_fix_forbidden_for_non_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с проектом/серией → 403."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await subs_fix_post(client, series.id, "текст фикса", auth_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_fix_creates_fix(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Успешное создание фикса: ответ содержит fix_id и fix_note, статус 201."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    fix_note = "поправить синхронизацию реплики 5"
+    response = await subs_fix_post(client, series.id, fix_note, auth_headers, request)
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    data = response.json()
+    assert data["fix_note"] == fix_note
+    assert isinstance(data["fix_id"], int)
+
+
+# ---------------------------------------------------------------------------
+# Access control для POST /subs/fix: те же категории, что и в PUT /subs
+#
+# SubsAccessChecker пропускает если хотя бы одно:
+#   1. user_level >= CURATOR_LEVEL                 → test_subs_fix_creates_fix
+#   2. user_id == project.curator_id               → test_subs_fix_access_project_curator
+#   3. запись в ProjectUser для этого проекта      → test_subs_fix_access_project_participant
+#   4. user_id в series.staff_ids (6 полей)        → test_subs_fix_access_series_staff
+#   5. user_id среди актёров серии (Role)          → test_subs_fix_access_series_actor
+# ---------------------------------------------------------------------------
+
+
+async def test_subs_fix_access_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (без уровня куратора) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    project = await create_project(curator_id=requester.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await subs_fix_post(client, series.id, "фикс", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+async def test_subs_fix_access_project_participant(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник проекта (запись в ProjectUser) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    async with TestSession() as s:
+        s.add(ProjectUser(user_id=requester.user_id, project_id=project.project_id))
+        await s.commit()
+
+    async def _remove_participant() -> None:
+        async with TestSession() as s:
+            pu = await s.get(ProjectUser, (requester.user_id, project.project_id))
+            if pu:
+                await s.delete(pu)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_remove_participant()))
+
+    response = await subs_fix_post(client, series.id, "фикс", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.parametrize("staff_field", _STAFF_FIELDS)
+async def test_subs_fix_access_series_staff(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Каждый из шести стафф-участников серии имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: requester.user_id}
+    )
+
+    response = await subs_fix_post(client, series.id, "фикс", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+async def test_subs_fix_access_series_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр серии (запись в Role) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    await create_role(series.id, requester.user_id, request)
+
+    response = await subs_fix_post(client, series.id, "фикс", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED

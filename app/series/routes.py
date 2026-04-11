@@ -36,6 +36,8 @@ from app.series.schemas import (
     SubsUpdateResponse,
     AssFileSubsResponse,
     AssFixItemResponse,
+    AssFixCreateRequest,
+    AssFixCreateResponse,
     RoleSubsResponse,
     ActorSubsResponse,
     FixSubsResponse,
@@ -737,6 +739,23 @@ async def update_series_subs(
         ),
         roles=roles_response,
     )
+
+
+@router.post(
+    "/{seria_id}/subs/fix",
+    response_model=AssFixCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_subs_fix(
+    data: AssFixCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SubsAccessChecker())],
+) -> AssFile:
+    db_fix = AssFile(series_id=db_seria.id, fix_note=data.fix_note)
+    db.add(db_fix)
+    await db.commit()
+    await db.refresh(db_fix)
+    return db_fix
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

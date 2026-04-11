@@ -245,3 +245,14 @@ class RoleSubsResponse(BaseModel):
 class SubsUpdateResponse(BaseModel):
     ass_file: AssFileSubsResponse
     roles: list[RoleSubsResponse]
+
+
+class AssFixCreateRequest(BaseModel):
+    fix_note: str
+
+
+class AssFixCreateResponse(BaseModel):
+    fix_id: int
+    fix_note: str
+
+    model_config = ConfigDict(from_attributes=True)
