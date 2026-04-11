@@ -14,7 +14,7 @@ from app.users.models import User as UserModel
 from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
-from .models import Series, Material, SeriesLink
+from .models import Series, Material, SeriesLink, AssFile
 from ..roles.models import Role, RoleState
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -288,6 +288,35 @@ class SubsAccessChecker:
             return db_seria
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+
+class AssFixChecker:
+    async def __call__(
+        self, fix_id: int, db: AsyncSession = Depends(get_db)
+    ) -> AssFile:
+        db_fix = await db.get(AssFile, fix_id)
+        if not db_fix:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Фикс субтитров не найден.",
+            )
+        return db_fix
+
+
+class AssFixAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_fix: AssFile = Depends(AssFixChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> AssFile:
+        db_seria = await db.get(Series, db_fix.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+        await SubsAccessChecker()(seria_id=db_seria.id, user=user, db=db)
+        return db_fix
 
 
 def sanitize_filename(name: str) -> str:

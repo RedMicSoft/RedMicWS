@@ -62,6 +62,7 @@ from .utils import (
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
     SubsAccessChecker,
+    AssFixAccessChecker,
     MEDIA_ROOT,
 )
 from .models import Series, Material, SeriesLink, AssFile
@@ -756,6 +757,16 @@ async def create_subs_fix(
     await db.commit()
     await db.refresh(db_fix)
     return db_fix
+
+
+@router.delete("/subs/fix/{fix_id}", response_model=str)
+async def delete_subs_fix(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[AssFile, Depends(AssFixAccessChecker())],
+) -> str:
+    await db.delete(db_fix)
+    await db.commit()
+    return "Фикс субтитров успешно удалён"
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

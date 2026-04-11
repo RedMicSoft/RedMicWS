@@ -16,7 +16,7 @@ from tests.helpers.users import create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series
 from tests.helpers.roles import create_role
-from tests.helpers.subs import subs_put, subs_fix_post
+from tests.helpers.subs import subs_put, subs_fix_post, subs_fix_delete
 from app.projects.models import ProjectUser
 from app.roles.models import Fix, Role
 from app.series.utils import MEDIA_ROOT
@@ -570,3 +570,163 @@ async def test_subs_fix_access_series_actor(
 
     response = await subs_fix_post(client, series.id, "фикс", headers, request)
     assert response.status_code == status.HTTP_201_CREATED
+
+
+# ---------------------------------------------------------------------------
+# DELETE /series/subs/fix/{fix_id}
+# ---------------------------------------------------------------------------
+
+
+async def test_subs_fix_delete_requires_auth(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Без токена → 401."""
+    response = await subs_fix_delete(client, 9999, {})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_fix_delete_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующий фикс → 404."""
+    response = await subs_fix_delete(client, 9999999, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_subs_fix_delete_forbidden_for_non_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с проектом/серией → 403."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    other_headers = await login_user(client, other.nickname)
+    fix_resp = await subs_fix_post(client, series.id, "фикс", other_headers, request)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, auth_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_fix_delete_success(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Успешное удаление фикса: ответ содержит строку, статус 200."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    fix_resp = await subs_fix_post(client, series.id, "фикс", auth_headers)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "Фикс субтитров успешно удалён"
+
+
+# ---------------------------------------------------------------------------
+# Access control для DELETE /subs/fix/{fix_id}: те же категории, что и в PUT /subs
+#
+# SubsAccessChecker пропускает если хотя бы одно:
+#   1. user_level >= CURATOR_LEVEL                 → test_subs_fix_delete_success
+#   2. user_id == project.curator_id               → test_subs_fix_delete_access_project_curator
+#   3. запись в ProjectUser для этого проекта      → test_subs_fix_delete_access_project_participant
+#   4. user_id в series.staff_ids (6 полей)        → test_subs_fix_delete_access_series_staff
+#   5. user_id среди актёров серии (Role)          → test_subs_fix_delete_access_series_actor
+# ---------------------------------------------------------------------------
+
+
+async def test_subs_fix_delete_access_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (без уровня куратора) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    project = await create_project(curator_id=requester.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    fix_resp = await subs_fix_post(client, series.id, "фикс", headers)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_subs_fix_delete_access_project_participant(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник проекта (запись в ProjectUser) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    async with TestSession() as s:
+        s.add(ProjectUser(user_id=requester.user_id, project_id=project.project_id))
+        await s.commit()
+
+    async def _remove_participant() -> None:
+        async with TestSession() as s:
+            pu = await s.get(ProjectUser, (requester.user_id, project.project_id))
+            if pu:
+                await s.delete(pu)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_remove_participant()))
+
+    fix_resp = await subs_fix_post(client, series.id, "фикс", headers)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.parametrize("staff_field", _STAFF_FIELDS)
+async def test_subs_fix_delete_access_series_staff(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Каждый из шести стафф-участников серии имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: requester.user_id}
+    )
+
+    fix_resp = await subs_fix_post(client, series.id, "фикс", headers)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_subs_fix_delete_access_series_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр серии (запись в Role) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    await create_role(series.id, requester.user_id, request)
+
+    fix_resp = await subs_fix_post(client, series.id, "фикс", headers)
+    assert fix_resp.status_code == status.HTTP_201_CREATED
+    fix_id = fix_resp.json()["fix_id"]
+
+    response = await subs_fix_delete(client, fix_id, headers)
+    assert response.status_code == status.HTTP_200_OK

@@ -60,6 +60,15 @@ async def subs_fix_post(
     return response
 
 
+async def subs_fix_delete(
+    client: AsyncClient,
+    fix_id: int,
+    headers: dict,
+) -> httpx.Response:
+    """Отправляет DELETE /series/subs/fix/{fix_id}."""
+    return await client.delete(f"/series/subs/fix/{fix_id}", headers=headers)
+
+
 async def subs_put(
     client: AsyncClient,
     seria_id: int,
