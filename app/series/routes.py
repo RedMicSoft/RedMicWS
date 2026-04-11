@@ -845,7 +845,7 @@ async def create_series_role(
     new_role = Role(
         role_name=data.role_name,
         series_id=db_seria.id,
-        user_id=actor_user_id,
+        user_id=actor_user_id if actor_user_id is not None else null(),
         srt_url="",
         checked=False,
         timed=False,
