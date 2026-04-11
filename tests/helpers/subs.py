@@ -60,6 +60,20 @@ async def subs_fix_post(
     return response
 
 
+async def subs_fix_patch(
+    client: AsyncClient,
+    fix_id: int,
+    fix_note: str,
+    headers: dict,
+) -> httpx.Response:
+    """Отправляет PATCH /series/subs/fix/{fix_id}."""
+    return await client.patch(
+        f"/series/subs/fix/{fix_id}",
+        json={"fix_note": fix_note},
+        headers=headers,
+    )
+
+
 async def subs_fix_delete(
     client: AsyncClient,
     fix_id: int,

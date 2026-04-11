@@ -759,6 +759,18 @@ async def create_subs_fix(
     return db_fix
 
 
+@router.patch("/subs/fix/{fix_id}", response_model=AssFixCreateResponse)
+async def update_subs_fix(
+    data: AssFixCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[AssFile, Depends(AssFixAccessChecker())],
+) -> AssFile:
+    db_fix.fix_note = data.fix_note
+    await db.commit()
+    await db.refresh(db_fix)
+    return db_fix
+
+
 @router.delete("/subs/fix/{fix_id}", response_model=str)
 async def delete_subs_fix(
     db: Annotated[AsyncSession, Depends(get_db)],
