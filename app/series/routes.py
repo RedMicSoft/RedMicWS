@@ -607,7 +607,9 @@ async def update_series_subs(
         )
 
     had_subs = db_seria.ass_url is not None
-    ass_url = await save_ass(ass_file, seria_id)
+    ass_url = await save_ass(
+        ass_file, seria_id, db_seria.project.title, db_seria.title
+    )
     db_seria.ass_url = ass_url
 
     ass_full_path = MEDIA_ROOT.parent / ass_url.lstrip("/")

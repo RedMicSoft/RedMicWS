@@ -382,7 +382,9 @@ def sanitize_filename(name: str) -> str:
     return re.sub(r"[^\w\-]", "_", name)
 
 
-async def save_ass(ass_file: UploadFile, seria_id: int) -> str:
+async def save_ass(
+    ass_file: UploadFile, seria_id: int, project_title: str, seria_title: str
+) -> str:
     if ass_file.filename is None or not ass_file.filename.lower().endswith(".ass"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Файл должен быть .ass"
@@ -391,7 +393,9 @@ async def save_ass(ass_file: UploadFile, seria_id: int) -> str:
     ass_dir = MEDIA_ROOT / "ass"
     ass_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = f"seria_{seria_id}_{uuid.uuid4()}.ass"
+    safe_project = sanitize_filename(project_title)
+    safe_seria = sanitize_filename(seria_title)
+    filename = f"{safe_project}_{safe_seria}_{uuid.uuid4()}.ass"
     file_path = ass_dir / filename
     content = await ass_file.read()
     file_path.write_bytes(content)
