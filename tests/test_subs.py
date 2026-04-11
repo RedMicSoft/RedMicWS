@@ -12,10 +12,12 @@ from sqlalchemy import select
 from fastapi import status
 
 from tests.conftest import TestSession
-from tests.helpers.users import create_user_with_level
+from tests.helpers.users import create_user_with_level, login_user
 from tests.helpers.projects import create_project
 from tests.helpers.series import create_series
+from tests.helpers.roles import create_role
 from tests.helpers.subs import subs_put
+from app.projects.models import ProjectUser
 from app.roles.models import Fix, Role
 from app.series.utils import MEDIA_ROOT
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
@@ -333,3 +335,101 @@ async def test_subs_no_project_role_actor_is_none(
 
     for role in response.json()["roles"]:
         assert role["actor"] is None, f"Неожиданный актёр у роли {role['role_name']}"
+
+
+# ---------------------------------------------------------------------------
+# Access control: все категории участников проекта
+#
+# SubsAccessChecker пропускает пользователя если выполняется хотя бы одно:
+#   1. user_level >= CURATOR_LEVEL                 (уже покрыто основными тестами)
+#   2. user_id == project.curator_id               → test_subs_access_project_curator
+#   3. запись в ProjectUser для этого проекта      → test_subs_access_project_participant
+#   4. user_id в series.staff_ids (6 полей)        → test_subs_access_series_staff
+#   5. user_id среди актёров серии (Role)          → test_subs_access_series_actor
+# ---------------------------------------------------------------------------
+
+
+async def test_subs_access_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (без уровня куратора) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    project = await create_project(curator_id=requester.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await subs_put(client, series.id, _BY_NAME, "name", headers, request)
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_subs_access_project_participant(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник проекта (запись в ProjectUser) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    async with TestSession() as s:
+        s.add(ProjectUser(user_id=requester.user_id, project_id=project.project_id))
+        await s.commit()
+
+    async def _remove_participant() -> None:
+        async with TestSession() as s:
+            pu = await s.get(ProjectUser, (requester.user_id, project.project_id))
+            if pu:
+                await s.delete(pu)
+            await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_remove_participant()))
+
+    response = await subs_put(client, series.id, _BY_NAME, "name", headers, request)
+    assert response.status_code == status.HTTP_200_OK
+
+
+_STAFF_FIELDS = [
+    "curator",
+    "sound_engineer",
+    "raw_sound_engineer",
+    "timer",
+    "translator",
+    "director",
+]
+
+
+@pytest.mark.parametrize("staff_field", _STAFF_FIELDS)
+async def test_subs_access_series_staff(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Каждый из шести стафф-участников серии имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: requester.user_id}
+    )
+
+    response = await subs_put(client, series.id, _BY_NAME, "name", headers, request)
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_subs_access_series_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр серии (запись в Role) имеет доступ."""
+    requester, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, requester.nickname)
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    await create_role(series.id, requester.user_id, request)
+
+    response = await subs_put(client, series.id, _BY_NAME, "name", headers, request)
+    assert response.status_code == status.HTTP_200_OK
