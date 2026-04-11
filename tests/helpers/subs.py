@@ -7,7 +7,7 @@ from httpx import AsyncClient
 
 from app.database import async_session_maker
 from app.series.models import AssFile
-from app.series.utils import MEDIA_ROOT
+from app.series.utils import BASE_DIR
 
 
 def cleanup_response_files(response_json: dict) -> None:
@@ -17,11 +17,11 @@ def cleanup_response_files(response_json: dict) -> None:
     if ass_url:
         urls.append(ass_url)
     for role in response_json.get("roles", []):
-        srt = role.get("subtitle")
+        srt = dict(role).get("subtitle")
         if srt:
             urls.append(srt)
     for url in urls:
-        path = MEDIA_ROOT.parent / url.lstrip("/")
+        path = BASE_DIR / url.lstrip("/")
         if path.exists():
             path.unlink()
 

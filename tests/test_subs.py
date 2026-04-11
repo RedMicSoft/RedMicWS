@@ -19,7 +19,7 @@ from tests.helpers.roles import create_role
 from tests.helpers.subs import subs_put, subs_fix_post, subs_fix_patch, subs_fix_delete
 from app.projects.models import ProjectUser
 from app.roles.models import Fix, Role
-from app.series.utils import MEDIA_ROOT
+from app.series.utils import BASE_DIR
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
 _DATA = Path(__file__).parent / "data"
@@ -115,13 +115,13 @@ async def test_subs_create_new_roles_by_name(
     assert response.status_code == status.HTTP_200_OK, response.text
     data = response.json()
 
-    assert str(data["ass_file"]["ass_file_url"]).startswith("/media/ass/")
+    assert str(data["ass_file"]["ass_file_url"]).startswith("/subs/ass/")
 
     created_names = {r["role_name"] for r in data["roles"]}
     assert _EXPECTED_ROLES_BY_NAME == created_names
 
     for role in data["roles"]:
-        assert str(role["subtitle"]).startswith("/media/srt/")
+        assert str(role["subtitle"]).startswith("/subs/srt/")
 
     # При первой загрузке субтитров заметки «Добавлена роль:» не создаются
     fix_notes = [str(af["fix_note"]) for af in data["ass_file"]["ass_fixes"]]
@@ -242,7 +242,7 @@ async def test_subs_update_changed_role_creates_fix(
         ales_role_id = ales_role.role_id
 
     # Подменяем SRT Fiery на диске — гарантируем отличие при следующей загрузке
-    srt_path = MEDIA_ROOT.parent / fiery_srt_url.lstrip("/")
+    srt_path = BASE_DIR / fiery_srt_url.lstrip("/")
     srt_path.write_text("1\n00:00:01,000 --> 00:00:02,000\nMODIFIED SENTINEL\n\n", "utf-8")
 
     # Выставляем checked=True, чтобы убедиться, что он сбросится
