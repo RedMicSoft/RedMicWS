@@ -55,14 +55,13 @@ from app.series.schemas import (
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
 from ..projects.utils import ProjectChecker, AccessChecker
-from ..users import get_max_lvl
 from ..users.models import User as UserModel
 from .utils import (
     MaterialAccessChecker,
     LinkAccessChecker,
+    generate_srt_filename,
     save_srt,
     save_ass,
-    sanitize_filename,
     compute_dub_progress,
     compute_role_state,
     get_series_participants,
@@ -79,6 +78,7 @@ from .utils import (
     AssFixAccessChecker,
     BASE_DIR,
     SUBS_ROOT,
+    save_srt_content,
 )
 from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel, ProjectRoleHistory
@@ -638,10 +638,8 @@ async def update_series_subs(
     now = datetime.now()
 
     for role_name in parser.roles:
-        safe_base = sanitize_filename(f"{project_title}_{series_title}_{role_name}")
-        srt_filename = f"{safe_base}.srt"
-        srt_path = SUBS_ROOT / "srt" / srt_filename
-        srt_url = f"/subs/srt/{srt_filename}"
+        srt_filename = generate_srt_filename(project_title, series_title, role_name)
+        srt_url = None
 
         new_srt_content = parser.get_role_content(
             role_name,
@@ -661,8 +659,9 @@ async def update_series_subs(
             )
 
             if old_content != new_srt_content:
-                srt_path.parent.mkdir(parents=True, exist_ok=True)
-                srt_path.write_text(new_srt_content, "utf-8")
+                srt_url = save_srt_content(
+                    new_srt_content.encode("utf-8"), srt_filename
+                )
                 existing_role.srt_url = srt_url
                 existing_role.checked = False
 
@@ -678,9 +677,7 @@ async def update_series_subs(
                     AssFile(series_id=seria_id, fix_note=f"Обновлена роль: {role_name}")
                 )
         else:
-            srt_path.parent.mkdir(parents=True, exist_ok=True)
-            srt_path.write_text(new_srt_content, "utf-8")
-
+            srt_url = save_srt_content(new_srt_content.encode("utf-8"), srt_filename)
             actor_user_id = project_roles_lookup.get(role_lower)
 
             db.add(
@@ -983,6 +980,24 @@ async def update_role_subtitle(
     db: Annotated[AsyncSession, Depends(get_db)],
     db_role: Annotated[Role, Depends(SeriesRoleSubtitleAccessChecker())],
 ) -> RoleSubtitleResponse:
+    role_with_series_and_project = await db.scalar(
+        select(Role)
+        .where(Role.role_id == db_role.role_id)
+        .options(selectinload(Role.series).selectinload(Series.project))
+    )
+    if role_with_series_and_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    if srt_file.filename is None or not srt_file.filename.lower().endswith(".srt"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Файл должен быть .srt")
+
+    srt_file.filename = generate_srt_filename(
+        project_title=role_with_series_and_project.series.project.title,
+        seria_title=role_with_series_and_project.series.title,
+        role_name=role_with_series_and_project.role_name,
+    )
     srt_url = await save_srt(srt_file)
     db_role.srt_url = srt_url
     db_role.checked = False
