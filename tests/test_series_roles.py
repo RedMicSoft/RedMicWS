@@ -16,7 +16,13 @@ from tests.conftest import TestSession
 from tests.helpers.users import create_user, create_user_with_level, login_user
 from tests.helpers.projects import create_project, create_project_role
 from tests.helpers.series import create_series
-from tests.helpers.roles import create_role, patch_role_state, post_role, put_role_actor
+from tests.helpers.roles import (
+    create_record,
+    create_role,
+    patch_role_state,
+    post_role,
+    put_role_actor,
+)
 from app.roles.models import Role
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
