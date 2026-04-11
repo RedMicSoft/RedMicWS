@@ -42,6 +42,9 @@ from app.series.schemas import (
     ActorSubsResponse,
     FixSubsResponse,
     RecordSubsResponse,
+    RoleCreateRequest,
+    RoleCreateResponse,
+    ActorCreateResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -61,6 +64,7 @@ from .utils import (
     SeriesAccessChecker,
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
+    SeriesRoleCreateAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     MEDIA_ROOT,
@@ -779,6 +783,84 @@ async def delete_subs_fix(
     await db.delete(db_fix)
     await db.commit()
     return "Фикс субтитров успешно удалён"
+
+
+@router.post(
+    "/{seria_id}/role",
+    response_model=RoleCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_series_role(
+    data: RoleCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_seria: Annotated[Series, Depends(SeriesRoleCreateAccessChecker())],
+) -> RoleCreateResponse:
+    existing = await db.scalar(
+        select(Role).where(
+            Role.series_id == db_seria.id,
+            Role.role_name.ilike(data.role_name),
+        )
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Роль с таким названием уже создана",
+        )
+
+    db_seria_full = await db.scalar(
+        select(Series)
+        .where(Series.id == db_seria.id)
+        .options(selectinload(Series.project).selectinload(ProjectModel.roles))
+    )
+
+    if db_seria_full is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+        )
+
+    project_roles_lookup: dict[str, int] = {
+        pr.role_title.lower(): pr.user_id for pr in db_seria_full.project.roles
+    }
+
+    role_lower = data.role_name.lower()
+    actor_user_id = -1
+    actor: ActorCreateResponse | None = None
+
+    if role_lower in project_roles_lookup:
+        actor_user_id = project_roles_lookup[role_lower]
+        db_actor = await db.get(UserModel, actor_user_id)
+        if db_actor is not None and db_actor.user_id != -1:
+            actor = ActorCreateResponse(
+                id=db_actor.user_id,
+                nickname=db_actor.nickname,
+                avatar_url=db_actor.avatar_url,
+            )
+
+    new_role = Role(
+        role_name=data.role_name,
+        series_id=db_seria.id,
+        user_id=actor_user_id,
+        srt_url="",
+        checked=False,
+        timed=False,
+        state=RoleState.NOT_LOADED,
+    )
+    db.add(new_role)
+    await db.commit()
+    await db.refresh(new_role)
+
+    return RoleCreateResponse(
+        id=new_role.role_id,
+        role_name=new_role.role_name,
+        actor=actor,
+        fixes=None,
+        note=new_role.note or "",
+        checked=new_role.checked,
+        timed=new_role.timed,
+        state=new_role.state.value,
+        subtitle=None,
+        records=None,
+    )
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

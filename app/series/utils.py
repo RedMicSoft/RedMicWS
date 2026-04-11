@@ -290,6 +290,42 @@ class SubsAccessChecker:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
 
 
+class SeriesRoleCreateAccessChecker:
+    async def __call__(
+        self,
+        seria_id: int,
+        user: UserModel = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> Series:
+        db_seria = await db.get(Series, seria_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+
+        db_project = await db.get(ProjectModel, db_seria.project_id)
+        if not db_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден."
+            )
+
+        try:
+            user_level = await get_max_lvl(db, user)
+        except HTTPException:
+            user_level = 0
+
+        if user_level >= CURATOR_LEVEL:
+            return db_seria
+
+        if user.user_id == db_seria.curator:
+            return db_seria
+
+        if user.user_id == db_project.curator_id:
+            return db_seria
+
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+
 class AssFixChecker:
     async def __call__(
         self, fix_id: int, db: AsyncSession = Depends(get_db)

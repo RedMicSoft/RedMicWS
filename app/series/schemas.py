@@ -256,3 +256,26 @@ class AssFixCreateResponse(BaseModel):
     fix_note: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RoleCreateRequest(BaseModel):
+    role_name: str
+
+
+class ActorCreateResponse(BaseModel):
+    id: int
+    nickname: str
+    avatar_url: str | None
+
+
+class RoleCreateResponse(BaseModel):
+    id: int
+    role_name: str
+    actor: ActorCreateResponse | None
+    fixes: None = None
+    note: str
+    checked: bool
+    timed: bool
+    state: str
+    subtitle: str | None
+    records: None = None
