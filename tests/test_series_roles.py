@@ -559,6 +559,25 @@ async def test_set_role_actor_response_shape(
     assert set(body.keys()) == {"user_id", "nickname", "avatar_url"}
 
 
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_set_role_null_actor_success(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Можно установить null в качестве актёра."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    response = await put_role_actor(client, role.role_id, None, auth_headers, request)
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert body["user_id"] == None
+    assert body["nickname"] == None
+    assert body["avatar_url"] == None
+
+
 # ---------------------------------------------------------------------------
 # ProjectRoleHistory tracking
 # ---------------------------------------------------------------------------

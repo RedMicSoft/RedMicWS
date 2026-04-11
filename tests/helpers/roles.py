@@ -76,7 +76,7 @@ async def create_role(
 async def put_role_actor(
     client: AsyncClient,
     role_id: int,
-    actor_id: int,
+    actor_id: int | None,
     headers: dict,
     request: pytest.FixtureRequest | None = None,
 ) -> Response:
