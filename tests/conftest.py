@@ -15,6 +15,7 @@ from fastapi import status
 # media/ и team_files/ создаются при импорте app-модулей, но на всякий случай:
 Path("media").mkdir(exist_ok=True)
 Path("team_files").mkdir(exist_ok=True)
+Path("subs").mkdir(exist_ok=True)
 
 from app.database import Base, get_db
 from app.main import app
