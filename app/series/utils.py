@@ -18,18 +18,20 @@ from .models import Series, Material, SeriesLink, AssFile
 from ..roles.models import Role, RoleState
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-MEDIA_ROOT = BASE_DIR / "media"
+SUBS_ROOT = BASE_DIR / "subs"
+SUBS_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 async def save_srt(srt: UploadFile) -> str:
-    if not srt.filename.lower().endswith(".srt"):
+    if srt.filename is None or not srt.filename.lower().endswith(".srt"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Файл должен быть .srt")
 
     content = await srt.read()
-    file_path = MEDIA_ROOT / "srt" / srt.filename
+    file_path = SUBS_ROOT / "srt" / srt.filename
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_bytes(content)
 
-    return f"/media/srt/{srt.filename}"
+    return f"/subs/srt/{srt.filename}"
 
 
 def get_series_no_actors(series: Series) -> dict:
@@ -390,7 +392,7 @@ async def save_ass(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Файл должен быть .ass"
         )
 
-    ass_dir = MEDIA_ROOT / "ass"
+    ass_dir = SUBS_ROOT / "ass"
     ass_dir.mkdir(parents=True, exist_ok=True)
 
     safe_project = sanitize_filename(project_title)
@@ -400,7 +402,7 @@ async def save_ass(
     content = await ass_file.read()
     file_path.write_bytes(content)
 
-    return f"/media/ass/{filename}"
+    return f"/subs/ass/{filename}"
 
 
 def compute_role_state(role: Role) -> RoleState:

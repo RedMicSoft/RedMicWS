@@ -51,6 +51,25 @@ class CustomStaticFiles(StaticFiles):
         return response
 
 
+class SubsStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+        except Exception:
+            from starlette.responses import Response
+
+            return Response("Файл не найден.", status_code=404)
+
+        if hasattr(response, "headers"):
+            filename = Path(path).name
+            encoded_filename = quote(filename)
+            response.headers["Content-Disposition"] = (
+                f"attachment; filename*=utf-8''{encoded_filename}"
+            )
+
+        return response
+
+
 async def file_delete(filename: str):
     file_to_delete = FILES_DIR / filename
 

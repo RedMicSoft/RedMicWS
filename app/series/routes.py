@@ -68,7 +68,8 @@ from .utils import (
     SeriesRoleDeleteAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
-    MEDIA_ROOT,
+    BASE_DIR,
+    SUBS_ROOT,
 )
 from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel
@@ -612,7 +613,7 @@ async def update_series_subs(
     )
     db_seria.ass_url = ass_url
 
-    ass_full_path = MEDIA_ROOT.parent / ass_url.lstrip("/")
+    ass_full_path = BASE_DIR / ass_url.lstrip("/")
     use_name = parse_type.lower() != "style"
     parser = ASSParser(filename=str(ass_full_path), use_name=use_name)
     parser.load()
@@ -630,8 +631,8 @@ async def update_series_subs(
     for role_name in parser.roles:
         safe_base = sanitize_filename(f"{project_title}_{series_title}_{role_name}")
         srt_filename = f"{safe_base}.srt"
-        srt_path = MEDIA_ROOT / "srt" / srt_filename
-        srt_url = f"/media/srt/{srt_filename}"
+        srt_path = SUBS_ROOT / "srt" / srt_filename
+        srt_url = f"/subs/srt/{srt_filename}"
 
         new_srt_content = parser.get_role_content(
             role_name,
@@ -645,7 +646,7 @@ async def update_series_subs(
         if role_lower in existing_roles:
             existing_role = existing_roles[role_lower]
 
-            old_full_path = MEDIA_ROOT.parent / existing_role.srt_url.lstrip("/")
+            old_full_path = BASE_DIR / existing_role.srt_url.lstrip("/")
             old_content = (
                 old_full_path.read_text("utf-8") if old_full_path.exists() else ""
             )

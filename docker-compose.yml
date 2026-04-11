@@ -8,6 +8,7 @@ services:
     volumes:
       - ./media:/RedMicWS/media
       - ./team_files:/RedMicWS/team_files
+      - ./subs:/RedMicWS/subs
     ports:
       - "8000:8000"
     container_name: redmicws_api
