@@ -65,6 +65,7 @@ from .utils import (
     SeriesDataAccessChecker,
     SeriesNoActorsAccessChecker,
     SeriesRoleCreateAccessChecker,
+    SeriesRoleDeleteAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     MEDIA_ROOT,
@@ -861,6 +862,16 @@ async def create_series_role(
         subtitle=None,
         records=None,
     )
+
+
+@router.delete("/role/{role_id}", response_model=str)
+async def delete_series_role(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleDeleteAccessChecker())],
+) -> str:
+    await db.delete(db_role)
+    await db.commit()
+    return "Роль успешно удалена из серии"
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -326,6 +326,29 @@ class SeriesRoleCreateAccessChecker:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
 
 
+class RoleChecker:
+    async def __call__(
+        self, role_id: int, db: AsyncSession = Depends(get_db)
+    ) -> Role:
+        db_role = await db.get(Role, role_id)
+        if not db_role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+            )
+        return db_role
+
+
+class SeriesRoleDeleteAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_role: Role = Depends(RoleChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Role:
+        await SeriesRoleCreateAccessChecker()(seria_id=db_role.series_id, user=user, db=db)
+        return db_role
+
+
 class AssFixChecker:
     async def __call__(
         self, fix_id: int, db: AsyncSession = Depends(get_db)
