@@ -38,7 +38,7 @@ async def post_role(
 
 async def create_role(
     series_id: int,
-    user_id: int,
+    user_id: int | None,
     request: pytest.FixtureRequest | None = None,
     **kwargs,
 ) -> Role:

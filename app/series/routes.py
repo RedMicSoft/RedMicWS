@@ -827,7 +827,7 @@ async def create_series_role(
     }
 
     role_lower = data.role_name.lower()
-    actor_user_id = -1
+    actor_user_id: int | None = None
     actor: ActorCreateResponse | None = None
 
     if role_lower in project_roles_lookup:
@@ -839,6 +839,8 @@ async def create_series_role(
                 nickname=db_actor.nickname,
                 avatar_url=db_actor.avatar_url,
             )
+        else:
+            actor_user_id = None
 
     new_role = Role(
         role_name=data.role_name,

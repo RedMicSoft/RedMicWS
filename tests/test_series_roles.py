@@ -91,6 +91,11 @@ async def test_create_role_success_by_curator_level(
     assert body["subtitle"] is None
     assert body["records"] is None
 
+    async with TestSession() as s:
+        db_role = await s.get(Role, body["id"])
+        assert db_role is not None
+        assert db_role.user_id is None
+
 
 # ---------------------------------------------------------------------------
 # 201 — access by project curator
@@ -247,7 +252,14 @@ async def test_create_role_no_project_role_match(
 
     response = await post_role(client, series.id, "DifferentRole", auth_headers, request)
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["actor"] is None
+
+    body = response.json()
+    assert body["actor"] is None
+
+    async with TestSession() as s:
+        db_role = await s.get(Role, body["id"])
+        assert db_role is not None
+        assert db_role.user_id is None
 
 
 # ===========================================================================
@@ -291,7 +303,7 @@ async def test_delete_role_forbidden_for_member(
     curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
     project = await create_project(curator_id=curator.user_id, request=request)
     series = await create_series(project.project_id, request)
-    role = await create_role(series.id, -1, request)
+    role = await create_role(series.id, None, request)
 
     response = await client.delete(f"/series/role/{role.role_id}", headers=auth_headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -311,7 +323,7 @@ async def test_delete_role_success_by_curator_level(
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(project.project_id, request)
     # не регистрируем cleanup — роль будет удалена запросом
-    role = await create_role(series.id, -1)
+    role = await create_role(series.id, None)
 
     response = await client.delete(f"/series/role/{role.role_id}", headers=auth_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -333,7 +345,7 @@ async def test_delete_role_success_by_project_curator(
     curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
     project = await create_project(curator_id=curator.user_id, request=request)
     series = await create_series(project.project_id, request)
-    role = await create_role(series.id, -1)
+    role = await create_role(series.id, None)
     headers = await login_user(client, curator.nickname)
 
     response = await client.delete(f"/series/role/{role.role_id}", headers=headers)
@@ -357,7 +369,7 @@ async def test_delete_role_success_by_series_curator(
     project_curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
     project = await create_project(curator_id=project_curator.user_id, request=request)
     series = await create_series(project.project_id, request, curator=series_curator.user_id)
-    role = await create_role(series.id, -1)
+    role = await create_role(series.id, None)
     headers = await login_user(client, series_curator.nickname)
 
     response = await client.delete(f"/series/role/{role.role_id}", headers=headers)
