@@ -4,8 +4,8 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.database import Base, get_db
 import enum
 
-from app.series.models import Series
-from app.users.models import User
+import app.series.models
+import app.users.models
 
 DELETED_USER_ID = -1
 
@@ -38,7 +38,9 @@ class Role(Base):
     )
     srt_url: Mapped[str] = mapped_column()
 
-    user: Mapped["User"] = relationship("User", back_populates="roles")
+    user: Mapped["app.users.models.User"] = relationship(
+        "app.users.models.User", back_populates="roles"
+    )
 
     fixes: Mapped[list["Fix"]] = relationship(
         "Fix", back_populates="role", cascade="all, delete-orphan"
@@ -48,8 +50,8 @@ class Role(Base):
         "Record", back_populates="role", cascade="all, delete-orphan"
     )
 
-    series: Mapped["Series"] = relationship(
-        "Series",
+    series: Mapped["app.series.models.Series"] = relationship(
+        "app.series.models.Series",
         back_populates="roles",
     )
 
@@ -92,7 +94,7 @@ class RoleHistory(Base):
     role_name: Mapped[str] = mapped_column()
     image_url: Mapped[str | None] = mapped_column()
 
-    user: Mapped["User"] = relationship(
-        "User",
+    user: Mapped["app.users.models.User"] = relationship(
+        "app.users.models.User",
         back_populates="history",
     )

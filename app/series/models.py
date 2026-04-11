@@ -7,7 +7,7 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 import enum
 
-from app.roles.models import Role
+import app.roles.models
 
 
 DELETED_USER_ID = -1
@@ -76,8 +76,8 @@ class Series(Base):
     )
     created_at: Mapped[date] = mapped_column(Date, default=lambda: datetime.now())
 
-    roles: Mapped[list["Role"]] = relationship(
-        "Role",
+    roles: Mapped[list["app.roles.models.Role"]] = relationship(
+        "app.roles.models.Role",
         back_populates="series",
         cascade="all, delete-orphan",
     )
