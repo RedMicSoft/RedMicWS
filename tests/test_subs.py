@@ -324,7 +324,8 @@ async def test_subs_no_project_role_actor_is_none(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
     """
-    Если в проекте нет записи ProjectRoleHistory для роли — actor в ответе None.
+    Если в проекте нет записи ProjectRoleHistory для роли — actor в ответе None,
+    а user_id в БД хранится как NULL, а не -1.
     """
     curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
     project = await create_project(curator_id=curator.user_id, request=request)
@@ -335,6 +336,15 @@ async def test_subs_no_project_role_actor_is_none(
 
     for role in response.json()["roles"]:
         assert role["actor"] is None, f"Неожиданный актёр у роли {role['role_name']}"
+
+    async with TestSession() as s:
+        db_roles = (
+            await s.scalars(select(Role).where(Role.series_id == series.id))
+        ).all()
+    for db_role in db_roles:
+        assert db_role.user_id is None, (
+            f"user_id роли '{db_role.role_name}' должен быть NULL, получено {db_role.user_id}"
+        )
 
 
 # ---------------------------------------------------------------------------

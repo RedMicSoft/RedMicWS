@@ -668,13 +668,13 @@ async def update_series_subs(
             srt_path.parent.mkdir(parents=True, exist_ok=True)
             srt_path.write_text(new_srt_content, "utf-8")
 
-            actor_user_id = project_roles_lookup.get(role_lower, -1)
+            actor_user_id = project_roles_lookup.get(role_lower)
 
             db.add(
                 Role(
                     role_name=role_name,
                     series_id=seria_id,
-                    user_id=actor_user_id,
+                    user_id=actor_user_id if actor_user_id is not None else null(),
                     srt_url=srt_url,
                     checked=False,
                     timed=False,
