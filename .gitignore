@@ -214,6 +214,7 @@ app/tests.py
 .media
 /media/
 /team_files/
+/subs/
 
 /clean.sql
 /media/avatars/
