@@ -606,6 +606,7 @@ async def update_series_subs(
             status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
         )
 
+    had_subs = db_seria.ass_url is not None
     ass_url = await save_ass(ass_file, seria_id)
     db_seria.ass_url = ass_url
 
@@ -681,7 +682,8 @@ async def update_series_subs(
                     state=RoleState.NOT_LOADED,
                 )
             )
-            db.add(AssFile(series_id=seria_id, fix_note=f"Добавлена роль: {role_name}"))
+            if had_subs:
+                db.add(AssFile(series_id=seria_id, fix_note=f"Добавлена роль: {role_name}"))
 
     await db.commit()
 

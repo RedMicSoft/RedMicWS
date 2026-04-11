@@ -123,10 +123,9 @@ async def test_subs_create_new_roles_by_name(
     for role in data["roles"]:
         assert str(role["subtitle"]).startswith("/media/srt/")
 
-    # AssFile-записи (по одной на роль) присутствуют
-    assert len(data["ass_file"]["ass_fixes"]) == len(_EXPECTED_ROLES_BY_NAME)
+    # При первой загрузке субтитров заметки «Добавлена роль:» не создаются
     fix_notes = [str(af["fix_note"]) for af in data["ass_file"]["ass_fixes"]]
-    assert all(note.startswith("Добавлена роль:") for note in fix_notes)
+    assert not any(note.startswith("Добавлена роль:") for note in fix_notes)
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
@@ -170,6 +169,39 @@ async def test_subs_create_roles_by_style_ass_file(
 
     role_names = {r["role_name"] for r in data["roles"]}
     assert role_names == {"Twilight", "Spike", "ms Cake", "Mayor", "Фон_ж_1", "SB"}
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_new_role_note_only_on_second_upload(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """
+    Заметки «Добавлена роль:» создаются только если субтитры уже были загружены раньше.
+    При первой загрузке таких заметок быть не должно.
+    При повторной загрузке с новой ролью заметка создаётся.
+    """
+    from app.series.models import AssFile
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    # Первая загрузка — субтитров ещё не было
+    r1 = await subs_put(client, series.id, _BY_STYLE, "style", auth_headers, request)
+    assert r1.status_code == status.HTTP_200_OK, r1.text
+    fix_notes_first = [af["fix_note"] for af in r1.json()["ass_file"]["ass_fixes"]]
+    assert not any(note.startswith("Добавлена роль:") for note in fix_notes_first)
+
+    # Вторая загрузка другого файла — субтитры уже были, появляются новые роли
+    r2 = await subs_put(client, series.id, _BY_NAME, "name", auth_headers, request)
+    assert r2.status_code == status.HTTP_200_OK, r2.text
+    fix_notes_second = [af["fix_note"] for af in r2.json()["ass_file"]["ass_fixes"]]
+
+    # Все роли из _BY_NAME новые (не пересекаются со стилями _BY_STYLE),
+    # поэтому заметка должна быть для каждой из них
+    added_notes = [n for n in fix_notes_second if n.startswith("Добавлена роль:")]
+    added_role_names = {n.removeprefix("Добавлена роль: ") for n in added_notes}
+    assert added_role_names == _EXPECTED_ROLES_BY_NAME
 
 
 # ---------------------------------------------------------------------------
