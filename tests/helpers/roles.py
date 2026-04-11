@@ -8,7 +8,7 @@ from app.projects.models import ProjectRoleHistory
 from app.series.models import Series
 from tests.conftest import TestSession
 from tests.helpers import _uid
-from app.roles.models import Role, Record
+from app.roles.models import Fix, Role, Record
 
 
 async def post_role(
@@ -126,6 +126,35 @@ async def patch_role_state(
         json=kwargs,
         headers=headers,
     )
+
+
+async def put_role_subtitle(
+    client: AsyncClient,
+    role_id: int,
+    headers: dict,
+    filename: str = "test.srt",
+    content: bytes = b"1\n00:00:01,000 --> 00:00:02,000\nHello\n",
+    request: pytest.FixtureRequest | None = None,
+) -> Response:
+    """PUT /series/role/{role_id}/subtitle. Registers Fix cleanup when request is given."""
+    response = await client.put(
+        f"/series/role/{role_id}/subtitle",
+        files={"srt_file": (filename, content, "text/plain")},
+        headers=headers,
+    )
+    if request is not None and response.is_success:
+        fix_id = response.json()["fixes"][-1]["id"]
+
+        async def _delete_fix() -> None:
+            async with TestSession() as s:
+                db_fix = await s.get(Fix, fix_id)
+                if db_fix:
+                    await s.delete(db_fix)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete_fix()))
+
+    return response
 
 
 async def create_record(

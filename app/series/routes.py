@@ -49,6 +49,8 @@ from app.series.schemas import (
     RoleActorResponse,
     RoleStateUpdate,
     RoleStateResponse,
+    RoleSubtitleFixResponse,
+    RoleSubtitleResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -72,6 +74,7 @@ from .utils import (
     SeriesRoleDeleteAccessChecker,
     SeriesRoleActorSetAccessChecker,
     SeriesRoleStateAccessChecker,
+    SeriesRoleSubtitleAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
@@ -971,6 +974,52 @@ async def update_role_state(
         checked=db_role.checked,
         timed=db_role.timed,
         state=new_state.value,
+    )
+
+
+@router.put("/role/{role_id}/subtitle", response_model=RoleSubtitleResponse)
+async def update_role_subtitle(
+    srt_file: UploadFile,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleSubtitleAccessChecker())],
+) -> RoleSubtitleResponse:
+    srt_url = await save_srt(srt_file)
+    db_role.srt_url = srt_url
+    db_role.checked = False
+
+    now = datetime.now()
+    db.add(
+        Fix(
+            role_id=db_role.role_id,
+            phrase=0,
+            note=f"был обновлён srt файл {now.strftime('%d.%m.%Y %H:%M')}",
+            ready=False,
+        )
+    )
+    await db.flush()
+
+    role_full = await db.scalar(
+        select(Role)
+        .where(Role.role_id == db_role.role_id)
+        .options(selectinload(Role.records), selectinload(Role.fixes))
+    )
+    if role_full is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    new_state = compute_role_state(role_full)
+    db_role.state = new_state
+    await db.commit()
+
+    return RoleSubtitleResponse(
+        subtitle=db_role.srt_url,
+        state=new_state.value,
+        checked=db_role.checked,
+        fixes=[
+            RoleSubtitleFixResponse(id=f.id, phrase=f.phrase, note=f.note, ready=f.ready)
+            for f in role_full.fixes
+        ],
     )
 
 

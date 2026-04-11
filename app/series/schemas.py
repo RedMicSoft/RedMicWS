@@ -300,3 +300,19 @@ class RoleStateResponse(BaseModel):
     checked: bool
     timed: bool
     state: str
+
+
+class RoleSubtitleFixResponse(BaseModel):
+    id: int
+    phrase: int
+    note: str
+    ready: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoleSubtitleResponse(BaseModel):
+    subtitle: str
+    state: str
+    checked: bool
+    fixes: list[RoleSubtitleFixResponse]

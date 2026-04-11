@@ -22,8 +22,9 @@ from tests.helpers.roles import (
     patch_role_state,
     post_role,
     put_role_actor,
+    put_role_subtitle,
 )
-from app.roles.models import Role
+from app.roles.models import Fix, Role
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
 
@@ -973,3 +974,242 @@ async def test_update_role_state_records_timed_checked_gives_mixing_ready(
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["state"] == "готова к сведению"
+
+
+# ===========================================================================
+# PUT /series/role/{role_id}/subtitle
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_update_subtitle_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await put_role_subtitle(client, 9999, {})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_role_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая роль → 404."""
+    response = await put_role_subtitle(client, 9999999, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_invalid_extension(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Файл без расширения .srt → 400."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    response = await client.put(
+        f"/series/role/{role.role_id}/subtitle",
+        files={"srt_file": ("subtitles.txt", b"content", "text/plain")},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# 403 — SeriesDataAccessChecker
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_update_subtitle_forbidden_for_unrelated_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    response = await put_role_subtitle(client, role.role_id, auth_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by level >= CURATOR_LEVEL
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может обновить srt роли."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    response = await put_role_subtitle(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert body["subtitle"].endswith(".srt")
+    assert body["checked"] is False
+    assert isinstance(body["fixes"], list)
+    assert len(body["fixes"]) == 1
+    fix = body["fixes"][0]
+    assert fix["phrase"] == 0
+    assert "был обновлён srt файл" in fix["note"]
+    assert fix["ready"] is False
+    assert "state" in body
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by project curator (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_update_subtitle_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может обновить srt роли."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+    headers = await login_user(client, curator.nickname)
+
+    response = await put_role_subtitle(client, role.role_id, headers, request=request)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by staff_ids (parametrized по полю)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_update_subtitle_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Каждый тип no_actors (staff) серии имеет доступ через SeriesDataAccessChecker."""
+    staff_user, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_user.user_id}
+    )
+    role = await create_role(series.id, None, request)
+    headers = await login_user(client, staff_user.nickname)
+
+    response = await put_role_subtitle(client, role.role_id, headers, request=request)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# Fix created, checked set to False, full fix list returned
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_sets_checked_false(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """checked сбрасывается в False при обновлении srt, даже если был True."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request, checked=True)
+
+    response = await put_role_subtitle(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["checked"] is False
+
+    async with TestSession() as s:
+        db_role = await s.get(Role, role.role_id)
+        assert db_role is not None
+        assert db_role.checked is False
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_accumulates_fixes(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Каждый вызов добавляет ровно один Fix; список растёт."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    r1 = await put_role_subtitle(client, role.role_id, auth_headers, request=request)
+    assert r1.status_code == status.HTTP_200_OK
+    assert len(r1.json()["fixes"]) == 1
+
+    r2 = await put_role_subtitle(client, role.role_id, auth_headers, request=request)
+    assert r2.status_code == status.HTTP_200_OK
+    assert len(r2.json()["fixes"]) == 2
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_returns_full_fix_list(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Response содержит полный список фиксов, включая ранее существовавшие."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    async with TestSession() as s:
+        pre_fix = Fix(role_id=role.role_id, phrase=5, note="старый фикс", ready=False)
+        s.add(pre_fix)
+        await s.commit()
+        await s.refresh(pre_fix)
+
+    pre_fix_id = pre_fix.id
+
+    async def _delete_pre_fix() -> None:
+        async with TestSession() as s:
+            db_fix = await s.get(Fix, pre_fix_id)
+            if db_fix:
+                await s.delete(db_fix)
+                await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_delete_pre_fix()))
+
+    response = await put_role_subtitle(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert len(body["fixes"]) == 2
+    phrases = {f["phrase"] for f in body["fixes"]}
+    assert 0 in phrases
+    assert 5 in phrases
