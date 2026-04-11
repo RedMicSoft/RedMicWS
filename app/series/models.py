@@ -105,12 +105,16 @@ class Series(Base):
     @property
     def staff_ids(self) -> list[int]:
         return [
-            self.curator,
-            self.sound_engineer,
-            self.raw_sound_engineer,
-            self.timer,
-            self.translator,
-            self.director,
+            id
+            for id in [
+                self.curator,
+                self.sound_engineer,
+                self.raw_sound_engineer,
+                self.timer,
+                self.translator,
+                self.director,
+            ]
+            if id is not None
         ]
 
     @property
