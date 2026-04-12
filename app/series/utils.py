@@ -7,6 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.projects.models import Project as ProjectModel, ProjectUser
 from app.projects.utils import AccessChecker
@@ -45,6 +46,26 @@ def save_srt_content(content: bytes, filename: str) -> str:
     file_path.write_bytes(content)
 
     return f"/subs/srt/{filename}"
+
+
+def delete_role_srt(role: Role):
+    if role.srt_url:
+        srt_path = BASE_DIR / role.srt_url
+        srt_path.unlink(missing_ok=True)
+
+
+async def delete_series_subs(db: AsyncSession, series: Series):
+    if series.ass_url:
+        ass_subs_path = BASE_DIR / series.ass_url
+        ass_subs_path.unlink(missing_ok=True)
+
+    # Removing roles srt paths, because db entries will be deleted by CASCADE
+    db_seria_full = await db.scalar(
+        select(Series).where(Series.id == series.id).options(selectinload(Series.roles))
+    )
+    if db_seria_full:
+        for role in db_seria_full.roles:
+            delete_role_srt(role)
 
 
 def get_series_no_actors(series: Series) -> dict:

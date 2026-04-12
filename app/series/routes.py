@@ -61,6 +61,8 @@ from ..users.models import User as UserModel
 from .utils import (
     MaterialAccessChecker,
     LinkAccessChecker,
+    delete_role_srt,
+    delete_series_subs,
     generate_srt_filename,
     save_srt,
     save_ass,
@@ -889,6 +891,8 @@ async def delete_series_role(
     db: Annotated[AsyncSession, Depends(get_db)],
     db_role: Annotated[Role, Depends(SeriesRoleDeleteAccessChecker())],
 ) -> str:
+    delete_role_srt(db_role)
+
     await db.delete(db_role)
     await db.commit()
     return "Роль успешно удалена из серии"
@@ -1095,5 +1099,7 @@ async def delete_series(
     db: Annotated[AsyncSession, Depends(get_db)],
     db_seria: Annotated[Series, Depends(SeriesAccessChecker())],
 ):
+    await delete_series_subs(db, db_seria)
+
     await db.delete(db_seria)
     await db.commit()

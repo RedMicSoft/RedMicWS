@@ -21,6 +21,7 @@ from app.projects.utils import (
     AccessChecker,
 )
 from app.database import get_db
+from app.series.utils import delete_series_subs
 from .models import (
     Project as ProjectModel,
     ProjectLink,
@@ -351,6 +352,15 @@ async def delete_project(
 ):
     if db_project.image_url:
         await delete_project_cover(db_project.image_url)
+
+    project_with_series = await db.scalar(
+        select(ProjectModel)
+        .where(ProjectModel.project_id == project_id)
+        .options(selectinload(ProjectModel.series_list))
+    )
+    if project_with_series and project_with_series.series_list:
+        for series in project_with_series.series_list:
+            await delete_series_subs(db, series)
 
     await db.delete(db_project)
     await db.commit()
