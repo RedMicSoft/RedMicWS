@@ -1495,6 +1495,60 @@ async def test_add_record_supports_flac_and_mp3(
         ), f"URL should end with extension for {filename}"
 
 
+# ---------------------------------------------------------------------------
+# Response fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "auth_headers, record_title, note",
+    [
+        ({"level": CURATOR_LEVEL}, "ep01.wav", None),
+        ({"level": CURATOR_LEVEL}, "take2.flac", "хороший дубль"),
+        ({"level": CURATOR_LEVEL}, "final.mp3", "финальный вариант"),
+    ],
+    indirect=["auth_headers"],
+)
+async def test_add_record_response_fields(
+    auth_headers: dict,
+    record_title: str,
+    note: str | None,
+    client: AsyncClient,
+    request: pytest.FixtureRequest,
+):
+    """Проверяет все поля ответа POST /series/role/{role_id}/records."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_record(
+        client,
+        role.role_id,
+        auth_headers,
+        record_title=record_title,
+        record_note=note,
+        request=request,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    body = response.json()
+    print(body)
+    ext = record_title.rsplit(".", 1)[-1]
+
+    # record — вложенный объект с полями записи
+    record = body["record"]
+    assert isinstance(record["id"], int) and record["id"] > 0
+    assert record["record_title"] == record_title
+    assert record["record_note"] == note
+    assert record["record_url"].startswith("/records/")
+    assert record["record_url"].endswith(f".{ext}")
+
+    # state — всегда «не затаймлена»: timed сбрасывается при загрузке записи
+    assert body["state"] == "не затаймлена"
+
+
 # ===========================================================================
 # DELETE /series/role/records/{record_id}
 # ===========================================================================

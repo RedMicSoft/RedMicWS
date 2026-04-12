@@ -1054,10 +1054,11 @@ async def update_role_subtitle(
     status_code=status.HTTP_201_CREATED,
 )
 async def add_role_record(
-    record_title: Annotated[str, Form()],
     record_file: UploadFile,
+    record_title: Annotated[str, Form()],
     db: Annotated[AsyncSession, Depends(get_db)],
     db_role: Annotated[Role, Depends(SeriesRoleRecordAccessChecker())],
+    note: Annotated[Optional[str], Form()] = None,
 ) -> RecordAddResponse:
     record_url = await save_record(record_file, record_title)
 
@@ -1065,7 +1066,7 @@ async def add_role_record(
         role_id=db_role.role_id,
         record_url=record_url,
         record_prev_title=record_title,
-        record_note=None,
+        record_note=note if note is not None else null(),
     )
     db.add(db_record)
     await db.flush()

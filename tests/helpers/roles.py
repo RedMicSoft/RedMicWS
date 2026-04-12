@@ -162,13 +162,18 @@ async def post_role_record(
     role_id: int,
     headers: dict,
     record_title: str = "test.wav",
+    record_note: str | None = None,
     content: bytes = b"RIFF\x00\x00\x00\x00WAVEfmt ",
     request: pytest.FixtureRequest | None = None,
 ) -> Response:
     """POST /series/role/{role_id}/records. Registers Record cleanup when request is given."""
     response = await client.post(
         f"/series/role/{role_id}/records",
-        data={"record_title": record_title},
+        data=(
+            {"record_title": record_title, "note": record_note}
+            if record_note is not None
+            else {"record_title": record_title}
+        ),
         files={"record_file": (record_title, content, "audio/wav")},
         headers=headers,
     )
