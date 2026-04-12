@@ -2208,3 +2208,220 @@ async def test_create_role_fix_persisted_in_db(
     assert db_fix.note == "сохранить в бд"
     assert db_fix.ready is False
     assert db_fix.role_id == role.role_id
+
+
+# ===========================================================================
+# DELETE /series/role/fixs/{fix_id}
+# ===========================================================================
+
+from tests.helpers.roles import create_fix, delete_role_fix
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_role_fix_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.delete("/series/role/fixs/9999999")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_role_fix_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующий фикс → 404."""
+    response = await delete_role_fix(client, 9999999, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_role_fix_forbidden_for_unrelated_member(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role.role_id, request=request)
+
+    stranger, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, stranger.nickname)
+
+    response = await delete_role_fix(client, fix.id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_delete_role_fix_forbidden_for_role_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр роли не имеет доступа через SeriesDataAccessChecker → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=actor.user_id, request=request)
+    fix = await create_fix(role.role_id, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await delete_role_fix(client, fix.id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by level >= CURATOR_LEVEL
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_role_fix_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может удалить фикс."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role.role_id)  # no request — endpoint deletes it
+
+    response = await delete_role_fix(client, fix.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert "state" in response.json()
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by project curator (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_role_fix_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может удалить фикс."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role.role_id)
+    headers = await login_user(client, curator.nickname)
+
+    response = await delete_role_fix(client, fix.id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by no_actors (series staff)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_delete_role_fix_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Любой no_actors (staff) серии может удалить фикс."""
+    project_curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    staff_member, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_member.user_id}
+    )
+    role = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role.role_id)
+    headers = await login_user(client, staff_member.nickname)
+
+    response = await delete_role_fix(client, fix.id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# State transition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_role_fix_fixes_need_becomes_mixing_ready(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Удаление последнего фикса у готовой роли → MIXING_READY."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=True, checked=True
+    )
+    await create_record(role.role_id, request)
+    await patch_role_state(client, role.role_id, auth_headers, timed=True, checked=True)
+
+    fix = await create_fix(role.role_id)  # endpoint will delete it
+
+    response = await delete_role_fix(client, fix.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["state"] == "готова к сведению"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_one_of_two_fixes_state_stays_fixes_need(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """При наличии двух фиксов удаление одного оставляет состояние FIXES_NEED."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=True, checked=True
+    )
+    await create_record(role.role_id, request)
+    await patch_role_state(client, role.role_id, auth_headers, timed=True, checked=True)
+
+    fix1 = await create_fix(role.role_id)  # endpoint deletes this one
+    fix2 = await create_fix(role.role_id, request=request)  # this one stays
+
+    response = await delete_role_fix(client, fix1.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["state"] == "требуются фиксы"
+
+
+# ---------------------------------------------------------------------------
+# DB cleanup
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_role_fix_removed_from_db(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """После удаления фикса его нет в БД."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role.role_id)
+    fix_id = fix.id
+
+    response = await delete_role_fix(client, fix_id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    async with TestSession() as s:
+        db_fix = await s.get(Fix, fix_id)
+    assert db_fix is None

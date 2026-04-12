@@ -16,7 +16,7 @@ from app.users.utils import get_current_user, get_max_lvl, CURATOR_LEVEL
 
 from .schemas import SeriesParticipant
 from .models import Series, Material, SeriesLink, AssFile
-from ..roles.models import Role, RoleState, Record
+from ..roles.models import Role, RoleState, Record, Fix
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SUBS_ROOT = BASE_DIR / "subs"
@@ -559,6 +559,34 @@ class SeriesRoleRecordAccessChecker:
             return db_role
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
+
+
+class RoleFixChecker:
+    async def __call__(
+        self, fix_id: int, db: AsyncSession = Depends(get_db)
+    ) -> Fix:
+        db_fix = await db.get(Fix, fix_id)
+        if not db_fix:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Фикс не найден."
+            )
+        return db_fix
+
+
+class SeriesRoleFixDeleteAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_fix: Fix = Depends(RoleFixChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Fix:
+        db_role = await db.get(Role, db_fix.role_id)
+        if not db_role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+            )
+        await SeriesRoleFixAccessChecker()(user=user, db_role=db_role, db=db)
+        return db_fix
 
 
 class SeriesRoleFixAccessChecker:

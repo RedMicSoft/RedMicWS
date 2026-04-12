@@ -361,3 +361,7 @@ class RoleFixItemResponse(BaseModel):
 class RoleFixCreateResponse(BaseModel):
     fix: RoleFixItemResponse
     state: str
+
+
+class RoleFixDeleteResponse(BaseModel):
+    state: str

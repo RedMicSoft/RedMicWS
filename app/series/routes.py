@@ -59,6 +59,7 @@ from app.series.schemas import (
     RoleFixCreate,
     RoleFixItemResponse,
     RoleFixCreateResponse,
+    RoleFixDeleteResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -87,6 +88,7 @@ from .utils import (
     SeriesRoleRecordAccessChecker,
     SeriesRoleRecordDeleteAccessChecker,
     SeriesRoleFixAccessChecker,
+    SeriesRoleFixDeleteAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
@@ -1191,6 +1193,33 @@ async def create_role_fix(
         ),
         state=new_state.value,
     )
+
+
+@router.delete("/role/fixs/{fix_id}", response_model=RoleFixDeleteResponse)
+async def delete_role_fix(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[Fix, Depends(SeriesRoleFixDeleteAccessChecker())],
+) -> RoleFixDeleteResponse:
+    role_id = db_fix.role_id
+
+    await db.delete(db_fix)
+    await db.flush()
+
+    role_full = await db.scalar(
+        select(Role)
+        .where(Role.role_id == role_id)
+        .options(selectinload(Role.records), selectinload(Role.fixes))
+    )
+    if role_full is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+        )
+
+    new_state = compute_role_state(role_full)
+    role_full.state = new_state
+    await db.commit()
+
+    return RoleFixDeleteResponse(state=new_state.value)
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

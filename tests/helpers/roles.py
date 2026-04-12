@@ -249,6 +249,46 @@ async def patch_role_note(
     )
 
 
+async def delete_role_fix(
+    client: AsyncClient,
+    fix_id: int,
+    headers: dict,
+) -> Response:
+    """DELETE /series/role/fixs/{fix_id}."""
+    return await client.delete(
+        f"/series/role/fixs/{fix_id}",
+        headers=headers,
+    )
+
+
+async def create_fix(
+    role_id: int,
+    phrase: int = 1,
+    note: str = "тестовый фикс",
+    request: pytest.FixtureRequest | None = None,
+) -> Fix:
+    """Create a Fix for a role directly in the test DB."""
+    async with TestSession() as s:
+        fix = Fix(role_id=role_id, phrase=phrase, note=note, ready=False)
+        s.add(fix)
+        await s.commit()
+        await s.refresh(fix)
+
+    if request is not None:
+        fix_id = fix.id
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_fix = await s.get(Fix, fix_id)
+                if db_fix:
+                    await s.delete(db_fix)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return fix
+
+
 async def post_role_fix(
     client: AsyncClient,
     role_id: int,
