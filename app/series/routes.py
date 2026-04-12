@@ -54,6 +54,8 @@ from app.series.schemas import (
     RecordItemResponse,
     RecordAddResponse,
     RecordDeleteResponse,
+    RoleNoteUpdate,
+    RoleNoteResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -1129,6 +1131,17 @@ async def delete_role_record(
     await db.commit()
 
     return RecordDeleteResponse(state=new_state.value)
+
+
+@router.patch("/role/{role_id}/note", response_model=RoleNoteResponse)
+async def update_role_note(
+    body: RoleNoteUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_role: Annotated[Role, Depends(SeriesRoleRecordAccessChecker())],
+) -> RoleNoteResponse:
+    db_role.note = body.note
+    await db.commit()
+    return RoleNoteResponse(note=db_role.note)
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)

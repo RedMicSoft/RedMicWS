@@ -20,6 +20,7 @@ from tests.helpers.roles import (
     create_record,
     create_role,
     delete_record,
+    patch_role_note,
     patch_role_state,
     post_role,
     post_role_record,
@@ -1826,3 +1827,166 @@ async def test_delete_record_removes_file(
     response = await delete_record(client, record.id, auth_headers)
     assert response.status_code == status.HTTP_200_OK
     assert not fake_file.exists(), "Файл должен быть удалён с диска"
+
+
+# ===========================================================================
+# PATCH /series/role/{role_id}/note
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_update_role_note_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.patch("/series/role/9999/note", json={"note": "test"})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_role_note_role_not_found(
+    auth_headers: dict, client: AsyncClient
+):
+    """Несуществующая роль → 404."""
+    response = await patch_role_note(client, 9999999, "text", auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403
+# ---------------------------------------------------------------------------
+
+
+async def test_update_role_note_forbidden_for_unrelated_member(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    stranger, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, stranger.nickname)
+
+    response = await patch_role_note(client, role.role_id, "text", headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_update_role_note_forbidden_for_actor_of_other_role(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр другой роли → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await patch_role_note(client, role.role_id, "text", headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by level >= 2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_role_note_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может изменить пояснение."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await patch_role_note(client, role.role_id, "новое пояснение", auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["note"] == "новое пояснение"
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by project curator (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_update_role_note_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может изменить пояснение."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, curator.nickname)
+
+    response = await patch_role_note(client, role.role_id, "куратор пишет", headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["note"] == "куратор пишет"
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by no_actors (series staff)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_update_role_note_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник из no_actors серии может изменить пояснение."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    staff_member, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(
+        project.project_id,
+        request,
+        **{staff_field: staff_member.user_id},
+    )
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, staff_member.nickname)
+
+    response = await patch_role_note(client, role.role_id, "staff note", headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["note"] == "staff note"
+
+
+# ---------------------------------------------------------------------------
+# 200 — access by role actor
+# ---------------------------------------------------------------------------
+
+
+async def test_update_role_note_success_by_role_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр своей роли может изменить пояснение."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=actor.user_id, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await patch_role_note(client, role.role_id, "актёр пишет", headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["note"] == "актёр пишет"

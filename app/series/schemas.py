@@ -334,3 +334,11 @@ class RecordAddResponse(BaseModel):
 
 class RecordDeleteResponse(BaseModel):
     state: str
+
+
+class RoleNoteUpdate(BaseModel):
+    note: str
+
+
+class RoleNoteResponse(BaseModel):
+    note: str | None

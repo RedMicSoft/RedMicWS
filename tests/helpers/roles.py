@@ -233,3 +233,17 @@ async def delete_record(
         f"/series/role/records/{record_id}",
         headers=headers,
     )
+
+
+async def patch_role_note(
+    client: AsyncClient,
+    role_id: int,
+    note: str,
+    headers: dict,
+) -> Response:
+    """PATCH /series/role/{role_id}/note."""
+    return await client.patch(
+        f"/series/role/{role_id}/note",
+        json={"note": note},
+        headers=headers,
+    )
