@@ -217,3 +217,14 @@ async def create_record(
         request.addfinalizer(lambda: asyncio.run(_delete()))
 
     return record
+
+
+async def delete_record(
+    client: AsyncClient,
+    record_id: int,
+    headers: dict,
+) -> Response:
+    return await client.delete(
+        f"/series/role/records/{record_id}",
+        headers=headers,
+    )

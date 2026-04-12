@@ -19,13 +19,14 @@ from tests.helpers.series import create_series
 from tests.helpers.roles import (
     create_record,
     create_role,
+    delete_record,
     patch_role_state,
     post_role,
     post_role_record,
     put_role_actor,
     put_role_subtitle,
 )
-from app.roles.models import Fix, Role
+from app.roles.models import Fix, Record, Role
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
 
@@ -1464,3 +1465,282 @@ async def test_add_record_supports_flac_and_mp3(
         assert response.json()["record"]["record_url"].endswith(
             filename.rsplit(".", 1)[-1]
         ), f"URL should end with extension for {filename}"
+
+
+# ===========================================================================
+# DELETE /series/role/records/{record_id}
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# 401 — no auth
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_record_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.delete("/series/role/records/9999999")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_record_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая запись → 404."""
+    response = await delete_record(client, 9999999, auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403 — random member without any link to the series
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_record_forbidden_for_unrelated_member(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с ролью/серией не может удалить запись → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    stranger, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(role.role_id, request=request)
+
+    headers = await login_user(client, stranger.nickname)
+    response = await delete_record(client, record.id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 403 — actor of a different role cannot delete record of another role
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_record_forbidden_for_actor_of_other_role(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр другой роли не может удалить запись чужой роли → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    other_role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(other_role.role_id, request=request)
+
+    # actor is assigned to a different role, not other_role
+    await create_role(series.id, user_id=actor.user_id, request=request)
+
+    headers = await login_user(client, actor.nickname)
+    response = await delete_record(client, record.id, headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 200 — curator (level >= CURATOR_LEVEL)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_record_success_by_curator(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор (уровень >= 2) может удалить любую запись."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(
+        role.role_id
+    )  # no request — we expect endpoint to delete
+
+    response = await delete_record(client, record.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert "state" in body
+
+
+# ---------------------------------------------------------------------------
+# 200 — project curator
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_record_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта может удалить запись."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(role.role_id)
+
+    headers = await login_user(client, curator.nickname)
+    response = await delete_record(client, record.id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# 200 — staff member (no_actors field)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_delete_record_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Любой no_actors (staff) серии может удалить запись."""
+    project_curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    staff_member, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_member.user_id}
+    )
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(role.role_id)
+
+    headers = await login_user(client, staff_member.nickname)
+    response = await delete_record(client, record.id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# 200 — role actor
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_record_success_by_role_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр роли может удалить собственную запись."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=actor.user_id, request=request)
+    record = await create_record(role.role_id)
+
+    headers = await login_user(client, actor.nickname)
+    response = await delete_record(client, record.id, headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# State transitions after deletion
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_last_record_state_becomes_not_loaded(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Удаление последней записи → состояние роли NOT_LOADED (не загружена)."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(role.role_id)
+
+    response = await delete_record(client, record.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["state"] == "не загружена"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_one_of_two_records_role_switches_to_not_timed(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Удаление одной из двух записей у готовой роли → состояние изменяется на не затаймлена."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=True, checked=True
+    )
+    # two records
+    record1 = await create_record(role.role_id)
+    record2 = await create_record(role.role_id, request=request)  # this one stays
+
+    change_state_result = await patch_role_state(
+        client, role.role_id, auth_headers, checked=True, timed=True
+    )
+    assert change_state_result.status_code == status.HTTP_200_OK
+
+    response = await delete_record(client, record1.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["state"] == "не затаймлена"
+
+
+# ---------------------------------------------------------------------------
+# DB cleanup — record is actually removed
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_record_removes_from_db(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """После удаления записи её нет в БД."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(role.role_id)
+    record_id = record.id
+
+    response = await delete_record(client, record.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    async with TestSession() as s:
+        db_record = await s.get(Record, record_id)
+    assert db_record is None
+
+
+# ---------------------------------------------------------------------------
+# File deletion
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_delete_record_removes_file(
+    auth_headers: dict,
+    client: AsyncClient,
+    request: pytest.FixtureRequest,
+):
+    """Физический файл записи удаляется вместе с записью."""
+    from app.series.utils import RECORDS_ROOT
+
+    # Create a real file in the records directory
+    fake_file = RECORDS_ROOT / "test_delete_me.wav"
+    fake_file.write_bytes(b"RIFF")
+
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    record = await create_record(
+        role.role_id, record_url=f"/records/test_delete_me.wav"
+    )
+
+    response = await delete_record(client, record.id, auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert not fake_file.exists(), "Файл должен быть удалён с диска"

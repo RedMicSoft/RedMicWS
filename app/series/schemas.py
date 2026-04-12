@@ -330,3 +330,7 @@ class RecordItemResponse(BaseModel):
 class RecordAddResponse(BaseModel):
     record: RecordItemResponse
     state: str
+
+
+class RecordDeleteResponse(BaseModel):
+    state: str
