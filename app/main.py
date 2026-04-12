@@ -2,7 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.files.utils import CustomStaticFiles, RecordsStaticFiles, SubsStaticFiles
+from app.files.utils import (
+    CustomStaticFiles,
+    RecordsStaticFiles,
+    SubsStaticFiles,
+    TeamStaticFiles,
+)
 from app.users.utils import scheduler
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -29,7 +34,7 @@ app.mount(
 )
 app.mount(
     "/team_files",
-    CustomStaticFiles(directory="team_files"),
+    TeamStaticFiles(directory="team_files"),
     name="team_files",
 )
 app.mount(
