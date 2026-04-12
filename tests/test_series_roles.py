@@ -1443,6 +1443,34 @@ async def test_add_record_state_not_loaded_to_not_timed(
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_add_record_resets_timed_and_checked_to_false(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Добавление записи сбрасывает timed и checked в False → состояние 'не затаймлена'."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    # Роль уже прошла все стадии: timed=True, checked=True
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=True, checked=True
+    )
+
+    response = await post_role_record(
+        client, role.role_id, auth_headers, request=request
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    body = response.json()
+    assert body["state"] == "не затаймлена"
+
+    async with TestSession() as s:
+        db_role = await s.get(Role, role.role_id)
+        assert db_role is not None
+        assert db_role.timed is False
+        assert db_role.checked is False
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_add_record_supports_flac_and_mp3(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):

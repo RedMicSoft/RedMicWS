@@ -1080,6 +1080,8 @@ async def add_role_record(
             status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
         )
 
+    role_full.timed = False
+    role_full.checked = False
     new_state = compute_role_state(role_full)
     db_role.state = new_state
     await db.commit()
