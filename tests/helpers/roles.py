@@ -261,6 +261,20 @@ async def delete_role_fix(
     )
 
 
+async def patch_role_fix_ready(
+    client: AsyncClient,
+    fix_id: int,
+    ready: bool,
+    headers: dict,
+) -> Response:
+    """PATCH /series/role/fixs/{fix_id}."""
+    return await client.patch(
+        f"/series/role/fixs/{fix_id}",
+        json={"ready": ready},
+        headers=headers,
+    )
+
+
 async def create_fix(
     role_id: int,
     phrase: int = 1,

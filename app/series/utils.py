@@ -589,6 +589,22 @@ class SeriesRoleFixDeleteAccessChecker:
         return db_fix
 
 
+class SeriesRoleFixUpdateAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_fix: Fix = Depends(RoleFixChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Fix:
+        db_role = await db.get(Role, db_fix.role_id)
+        if not db_role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Роль не найдена."
+            )
+        await SeriesRoleRecordAccessChecker()(user=user, db_role=db_role, db=db)
+        return db_fix
+
+
 class SeriesRoleFixAccessChecker:
     async def __call__(
         self,

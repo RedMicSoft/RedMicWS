@@ -365,3 +365,11 @@ class RoleFixCreateResponse(BaseModel):
 
 class RoleFixDeleteResponse(BaseModel):
     state: str
+
+
+class RoleFixUpdate(BaseModel):
+    ready: bool
+
+
+class RoleFixUpdateResponse(BaseModel):
+    fix: RoleFixItemResponse

@@ -60,6 +60,8 @@ from app.series.schemas import (
     RoleFixItemResponse,
     RoleFixCreateResponse,
     RoleFixDeleteResponse,
+    RoleFixUpdate,
+    RoleFixUpdateResponse,
 )
 from app.users.utils import UserChecker, get_current_user, CURATOR_LEVEL
 from app.roles.schemas import RoleCreate
@@ -89,6 +91,7 @@ from .utils import (
     SeriesRoleRecordDeleteAccessChecker,
     SeriesRoleFixAccessChecker,
     SeriesRoleFixDeleteAccessChecker,
+    SeriesRoleFixUpdateAccessChecker,
     SubsAccessChecker,
     AssFixAccessChecker,
     BASE_DIR,
@@ -1220,6 +1223,26 @@ async def delete_role_fix(
     await db.commit()
 
     return RoleFixDeleteResponse(state=new_state.value)
+
+
+@router.patch("/role/fixs/{fix_id}", response_model=RoleFixUpdateResponse)
+async def update_role_fix(
+    data: RoleFixUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_fix: Annotated[Fix, Depends(SeriesRoleFixUpdateAccessChecker())],
+) -> RoleFixUpdateResponse:
+    db_fix.ready = data.ready
+    await db.commit()
+    await db.refresh(db_fix)
+
+    return RoleFixUpdateResponse(
+        fix=RoleFixItemResponse(
+            id=db_fix.id,
+            phrase=db_fix.phrase,
+            note=db_fix.note,
+            ready=db_fix.ready,
+        )
+    )
 
 
 @router.delete("/{seria_id}", status_code=status.HTTP_204_NO_CONTENT)
