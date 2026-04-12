@@ -247,3 +247,32 @@ async def patch_role_note(
         json={"note": note},
         headers=headers,
     )
+
+
+async def post_role_fix(
+    client: AsyncClient,
+    role_id: int,
+    phrase: int,
+    note: str,
+    headers: dict,
+    request: pytest.FixtureRequest | None = None,
+) -> Response:
+    """POST /series/role/{role_id}/fixs. Registers Fix cleanup when request is given."""
+    response = await client.post(
+        f"/series/role/{role_id}/fixs",
+        json={"phrase": phrase, "note": note},
+        headers=headers,
+    )
+    if request is not None and response.is_success:
+        fix_id = response.json()["fix"]["id"]
+
+        async def _delete() -> None:
+            async with TestSession() as s:
+                db_fix = await s.get(Fix, fix_id)
+                if db_fix:
+                    await s.delete(db_fix)
+                    await s.commit()
+
+        request.addfinalizer(lambda: asyncio.run(_delete()))
+
+    return response

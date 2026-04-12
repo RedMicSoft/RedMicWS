@@ -342,3 +342,22 @@ class RoleNoteUpdate(BaseModel):
 
 class RoleNoteResponse(BaseModel):
     note: str | None
+
+
+class RoleFixCreate(BaseModel):
+    phrase: int
+    note: str
+
+
+class RoleFixItemResponse(BaseModel):
+    id: int
+    phrase: int
+    note: str
+    ready: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoleFixCreateResponse(BaseModel):
+    fix: RoleFixItemResponse
+    state: str

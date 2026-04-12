@@ -561,6 +561,22 @@ class SeriesRoleRecordAccessChecker:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрещено.")
 
 
+class SeriesRoleFixAccessChecker:
+    async def __call__(
+        self,
+        user: UserModel = Depends(get_current_user),
+        db_role: Role = Depends(RoleChecker()),
+        db: AsyncSession = Depends(get_db),
+    ) -> Role:
+        db_seria = await db.get(Series, db_role.series_id)
+        if not db_seria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Серия не найдена."
+            )
+        await SeriesDataAccessChecker()(user=user, db_seria=db_seria, db=db)
+        return db_role
+
+
 class RecordChecker:
     async def __call__(
         self, record_id: int, db: AsyncSession = Depends(get_db)

@@ -1990,3 +1990,221 @@ async def test_update_role_note_success_by_role_actor(
     response = await patch_role_note(client, role.role_id, "актёр пишет", headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["note"] == "актёр пишет"
+
+
+# ===========================================================================
+# POST /series/role/{role_id}/fixs
+# ===========================================================================
+
+from tests.helpers.roles import post_role_fix
+from app.roles.models import Fix
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+async def test_create_role_fix_requires_auth(client: AsyncClient):
+    """Без токена → 401."""
+    response = await client.post("/series/role/9999/fixs", json={"phrase": 1, "note": "test"})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ---------------------------------------------------------------------------
+# 404
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_role_not_found(auth_headers: dict, client: AsyncClient):
+    """Несуществующая роль → 404."""
+    response = await post_role_fix(client, 9999999, 5, "note text", auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# 403
+# ---------------------------------------------------------------------------
+
+
+async def test_create_role_fix_forbidden_for_unrelated_member(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник без связи с серией/проектом → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    stranger, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    headers = await login_user(client, stranger.nickname)
+
+    response = await post_role_fix(client, role.role_id, 1, "фикс", headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_create_role_fix_forbidden_for_role_actor(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Актёр роли не имеет доступа через SeriesDataAccessChecker → 403."""
+    curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    actor, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=actor.user_id, request=request)
+    headers = await login_user(client, actor.nickname)
+
+    response = await post_role_fix(client, role.role_id, 1, "фикс", headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by level >= CURATOR_LEVEL
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_success_by_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Пользователь уровня >= 2 может добавить фикс."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_fix(client, role.role_id, 3, "фраза 3", auth_headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    body = response.json()
+    fix = body["fix"]
+    assert isinstance(fix["id"], int) and fix["id"] > 0
+    assert fix["phrase"] == 3
+    assert fix["note"] == "фраза 3"
+    assert fix["ready"] is False
+    assert "state" in body
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by project curator (level 1)
+# ---------------------------------------------------------------------------
+
+
+async def test_create_role_fix_success_by_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может добавить фикс."""
+    curator, _ = await create_user_with_level(MEMBER_LEVEL, request)
+    project = await create_project(curator_id=curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, curator.nickname)
+
+    response = await post_role_fix(client, role.role_id, 7, "фраза 7", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["fix"]["phrase"] == 7
+
+
+# ---------------------------------------------------------------------------
+# 201 — access by no_actors (series staff)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    [
+        "curator",
+        "sound_engineer",
+        "raw_sound_engineer",
+        "director",
+        "timer",
+        "translator",
+    ],
+)
+async def test_create_role_fix_success_by_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Любой no_actors (staff) серии может добавить фикс."""
+    project_curator, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    staff_member, _ = await create_user_with_level(MEMBER_LEVEL, request)
+
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(
+        project.project_id, request, **{staff_field: staff_member.user_id}
+    )
+    role = await create_role(series.id, user_id=None, request=request)
+    headers = await login_user(client, staff_member.nickname)
+
+    response = await post_role_fix(client, role.role_id, 2, "staff fix", headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+# ---------------------------------------------------------------------------
+# State transition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_mixing_ready_becomes_fixes_need(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Роль в состоянии MIXING_READY после добавления фикса переходит в FIXES_NEED."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(
+        series.id, user_id=None, request=request, timed=True, checked=True
+    )
+    await create_record(role.role_id, request)
+
+    # Set state to MIXING_READY via PATCH /state
+    await patch_role_state(client, role.role_id, auth_headers, timed=True, checked=True)
+
+    response = await post_role_fix(client, role.role_id, 10, "требуется переписать", auth_headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["state"] == "требуются фиксы"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_not_loaded_state_unchanged(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Фикс на роли без записей — состояние остаётся 'не загружена'."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_fix(client, role.role_id, 1, "ранний фикс", auth_headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["state"] == "не загружена"
+
+
+# ---------------------------------------------------------------------------
+# DB persistence
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_persisted_in_db(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Созданный фикс сохраняется в базе данных."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request)
+
+    response = await post_role_fix(client, role.role_id, 5, "сохранить в бд", auth_headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    fix_id = response.json()["fix"]["id"]
+    async with TestSession() as s:
+        db_fix = await s.get(Fix, fix_id)
+
+    assert db_fix is not None
+    assert db_fix.phrase == 5
+    assert db_fix.note == "сохранить в бд"
+    assert db_fix.ready is False
+    assert db_fix.role_id == role.role_id
