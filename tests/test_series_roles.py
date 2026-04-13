@@ -505,6 +505,7 @@ async def test_set_role_actor_success_by_curator_level(
     body = response.json()
     assert body["user_id"] == actor.user_id
     assert body["nickname"] == actor.nickname
+    assert body["is_active"] == actor.is_active
 
 
 async def test_set_role_actor_success_by_project_curator(
@@ -526,6 +527,7 @@ async def test_set_role_actor_success_by_project_curator(
     body = response.json()
     assert body["user_id"] == actor.user_id
     assert body["nickname"] == actor.nickname
+    assert body["is_active"] == actor.is_active
 
 
 async def test_set_role_actor_success_by_series_director(
@@ -548,13 +550,14 @@ async def test_set_role_actor_success_by_series_director(
     body = response.json()
     assert body["user_id"] == actor.user_id
     assert body["nickname"] == actor.nickname
+    assert body["is_active"] == actor.is_active
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_set_role_actor_response_shape(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
-    """Ответ содержит user_id, nickname, avatar_url."""
+    """Ответ содержит user_id, nickname, avatar_url, is_active."""
     other, _ = await create_user_with_level(CURATOR_LEVEL, request)
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(project.project_id, request)
@@ -567,7 +570,7 @@ async def test_set_role_actor_response_shape(
     assert response.status_code == status.HTTP_200_OK
 
     body = response.json()
-    assert set(body.keys()) == {"user_id", "nickname", "avatar_url"}
+    assert set(body.keys()) == {"user_id", "nickname", "avatar_url", "is_active"}
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
@@ -587,6 +590,7 @@ async def test_set_role_null_actor_success(
     assert body["user_id"] == None
     assert body["nickname"] == None
     assert body["avatar_url"] == None
+    assert body["is_active"] == None
 
 
 # ---------------------------------------------------------------------------

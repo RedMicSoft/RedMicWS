@@ -289,6 +289,7 @@ class RoleActorResponse(BaseModel):
     user_id: int | None
     nickname: str | None
     avatar_url: str | None
+    is_active: bool | None
 
 
 class RoleStateUpdate(BaseModel):

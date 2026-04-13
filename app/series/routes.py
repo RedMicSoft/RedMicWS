@@ -921,7 +921,7 @@ async def set_role_actor(
     if data.actor_id is None:
         db_role.user_id = null()
         await db.commit()
-        return RoleActorResponse(user_id=None, nickname=None, avatar_url=None)
+        return RoleActorResponse(user_id=None, nickname=None, avatar_url=None, is_active=None)
 
     actor = await db.get(UserModel, data.actor_id)
     if actor is None:
@@ -960,6 +960,7 @@ async def set_role_actor(
         user_id=actor.user_id,
         nickname=actor.nickname,
         avatar_url=actor.avatar_url,
+        is_active=actor.is_active,
     )
 
 
