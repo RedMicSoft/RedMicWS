@@ -72,6 +72,7 @@ from .utils import (
     LinkAccessChecker,
     delete_role_srt,
     delete_series_subs,
+    generate_record_title_filename,
     generate_srt_filename,
     save_srt,
     save_ass,
@@ -1076,7 +1077,7 @@ async def add_role_record(
     db_record = Record(
         role_id=db_role.role_id,
         record_url=record_url,
-        record_prev_title=record_title,
+        record_prev_title=generate_record_title_filename(record_file, record_title),
         record_note=note if note is not None else null(),
     )
     db.add(db_record)

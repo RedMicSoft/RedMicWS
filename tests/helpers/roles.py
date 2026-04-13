@@ -162,6 +162,7 @@ async def post_role_record(
     role_id: int,
     headers: dict,
     record_title: str = "test.wav",
+    record_filename: str = "test.wav",
     record_note: str | None = None,
     content: bytes = b"RIFF\x00\x00\x00\x00WAVEfmt ",
     request: pytest.FixtureRequest | None = None,
@@ -174,7 +175,7 @@ async def post_role_record(
             if record_note is not None
             else {"record_title": record_title}
         ),
-        files={"record_file": (record_title, content, "audio/wav")},
+        files={"record_file": (record_filename, content, "audio/wav")},
         headers=headers,
     )
     if request is not None and response.is_success:

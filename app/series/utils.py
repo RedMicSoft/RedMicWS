@@ -503,19 +503,23 @@ async def save_ass(
 ALLOWED_RECORD_EXTENSIONS = {".wav", ".flac", ".mp3"}
 
 
-def generate_record_filename(record_title: str) -> str:
-    ext = Path(record_title).suffix.lower()
-    return f"{uuid.uuid4()}{ext}"
+def generate_record_title_filename(record_file: UploadFile, record_title: str) -> str:
+    ext = Path(record_file.filename if record_file.filename else "").suffix.lower()
+    full_record_title = record_title
+    if not record_title.endswith(ext):
+        full_record_title += ext
+    return full_record_title
 
 
 async def save_record(record_file: UploadFile, record_title: str) -> str:
-    ext = Path(record_title).suffix.lower()
+    ext = Path(record_file.filename if record_file.filename else "").suffix.lower()
     if ext not in ALLOWED_RECORD_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Файл должен быть wav, flac или mp3",
         )
-    filename = generate_record_filename(record_title)
+
+    filename = f"{uuid.uuid4()}{ext}"
     file_path = RECORDS_ROOT / filename
     content = await record_file.read()
     file_path.write_bytes(content)

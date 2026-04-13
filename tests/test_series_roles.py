@@ -5,6 +5,7 @@ Tests for series role endpoints:
 """
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -1290,7 +1291,8 @@ async def test_add_record_invalid_format(
         client,
         role.role_id,
         auth_headers,
-        record_title="audio.ogg",
+        record_title="audio",
+        record_filename="audio.ogg",
         content=b"data",
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -1487,6 +1489,7 @@ async def test_add_record_supports_flac_and_mp3(
             role.role_id,
             auth_headers,
             record_title=filename,
+            record_filename=filename,
             content=b"\x00" * 16,
             request=request,
         )
@@ -1502,17 +1505,21 @@ async def test_add_record_supports_flac_and_mp3(
 
 
 @pytest.mark.parametrize(
-    "auth_headers, record_title, note",
+    "auth_headers, record_title, record_filename, note",
     [
-        ({"level": CURATOR_LEVEL}, "ep01.wav", None),
-        ({"level": CURATOR_LEVEL}, "take2.flac", "хороший дубль"),
-        ({"level": CURATOR_LEVEL}, "final.mp3", "финальный вариант"),
+        ({"level": CURATOR_LEVEL}, "ep01.wav", "ep01.wav", None),
+        ({"level": CURATOR_LEVEL}, "take2.flac", "take2.flac", "хороший дубль"),
+        ({"level": CURATOR_LEVEL}, "final.mp3", "final.mp3", "финальный вариант"),
+        ({"level": CURATOR_LEVEL}, "post_fix2", "final2.wav", "финальный вариант 2"),
+        ({"level": CURATOR_LEVEL}, "post_fix3", "final2.flac", "финальный вариант 3"),
+        ({"level": CURATOR_LEVEL}, "post_fix4", "final2.mp3", "финальный вариант 4"),
     ],
     indirect=["auth_headers"],
 )
 async def test_add_record_response_fields(
     auth_headers: dict,
     record_title: str,
+    record_filename: str,
     note: str | None,
     client: AsyncClient,
     request: pytest.FixtureRequest,
@@ -1528,6 +1535,7 @@ async def test_add_record_response_fields(
         role.role_id,
         auth_headers,
         record_title=record_title,
+        record_filename=record_filename,
         record_note=note,
         request=request,
     )
@@ -1536,15 +1544,15 @@ async def test_add_record_response_fields(
 
     body = response.json()
     print(body)
-    ext = record_title.rsplit(".", 1)[-1]
+    ext = Path(record_filename).suffix.lower()
 
     # record — вложенный объект с полями записи
     record = body["record"]
     assert isinstance(record["id"], int) and record["id"] > 0
-    assert record["record_title"] == record_title
+    assert record["record_title"] == record_title if record_title.endswith(ext) else record["record_title"] == f"{record_title}{ext}"
     assert record["record_note"] == note
     assert record["record_url"].startswith("/records/")
-    assert record["record_url"].endswith(f".{ext}")
+    assert record["record_url"].endswith(ext)
 
     # state — всегда «не затаймлена»: timed сбрасывается при загрузке записи
     assert body["state"] == "не затаймлена"
