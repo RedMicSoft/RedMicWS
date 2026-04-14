@@ -406,9 +406,9 @@ async def get_series_by_id(
                 "records": [
                     {
                         "id": rec.id,
-                        "record_title": getattr(rec, "title", "Без названия"),
-                        "record_note": getattr(rec, "analysis", ""),
-                        "record_url": getattr(rec, "url", ""),
+                        "record_title": getattr(rec, "record_prev_title", "Без названия"),
+                        "record_note": getattr(rec, "record_note", ""),
+                        "record_url": getattr(rec, "record_url", ""),
                     }
                     for rec in r.records
                 ],
