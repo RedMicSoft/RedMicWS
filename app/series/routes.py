@@ -289,7 +289,9 @@ async def get_series_by_id(
             selectinload(Series.project),
             selectinload(Series.materials),
             selectinload(Series.links),
-            selectinload(Series.roles).selectinload(Role.user).selectinload(UserModel.contacts),
+            selectinload(Series.roles)
+            .selectinload(Role.user)
+            .selectinload(UserModel.contacts),
             selectinload(Series.roles).selectinload(Role.fixes),
             selectinload(Series.roles).selectinload(Role.records),
         )
@@ -326,9 +328,7 @@ async def get_series_by_id(
             "nickname": u.nickname,
             "avatar_url": u.avatar_url,
             "is_active": u.is_active,
-            "contacts": [
-                {"title": c.title, "link": c.link} for c in u.contacts
-            ],
+            "contacts": [{"title": c.title, "link": c.link} for c in u.contacts],
         }
 
     def format_date(d: date):
@@ -372,7 +372,10 @@ async def get_series_by_id(
             }
             for m in s.materials
         ],
-        "ass_file": {"ass_file_url": s.ass_url, "ass_fixes": []}, # Можно добавить логику загрузки AssFile если нужно
+        "ass_file": {
+            "ass_file_url": s.ass_url,
+            "ass_fixes": [],
+        },  # Можно добавить логику загрузки AssFile если нужно
         "links": [
             {"id": l.id, "link_title": l.link_title, "link_url": l.link_url}
             for l in s.links
@@ -394,9 +397,11 @@ async def get_series_by_id(
                     "nickname": r.user.nickname if r.user else "Не назначен",
                     "avatar_url": r.user.avatar_url if r.user else None,
                     "is_active": r.user.is_active if r.user else False,
-                    "contacts": [
-                        {"title": c.title, "link": c.link} for c in r.user.contacts
-                    ] if r.user else [],
+                    "contacts": (
+                        [{"title": c.title, "link": c.link} for c in r.user.contacts]
+                        if r.user
+                        else []
+                    ),
                 },
                 "fixes": [
                     {
@@ -415,7 +420,9 @@ async def get_series_by_id(
                 "records": [
                     {
                         "id": rec.id,
-                        "record_title": getattr(rec, "record_prev_title", "Без названия"),
+                        "record_title": getattr(
+                            rec, "record_prev_title", "Без названия"
+                        ),
                         "record_note": getattr(rec, "record_note", ""),
                         "record_url": getattr(rec, "record_url", ""),
                     }
@@ -646,9 +653,7 @@ async def update_series_subs(
         )
 
     had_subs = db_seria.ass_url is not None
-    ass_url = await save_ass(
-        ass_file, seria_id, db_seria.project.title, db_seria.title
-    )
+    ass_url = await save_ass(ass_file, seria_id, db_seria.project.title, db_seria.title)
     db_seria.ass_url = ass_url
 
     ass_full_path = BASE_DIR / ass_url.lstrip("/")
@@ -721,7 +726,9 @@ async def update_series_subs(
                 )
             )
             if had_subs:
-                db.add(AssFile(series_id=seria_id, fix_note=f"Добавлена роль: {role_name}"))
+                db.add(
+                    AssFile(series_id=seria_id, fix_note=f"Добавлена роль: {role_name}")
+                )
 
     await db.commit()
 
@@ -735,6 +742,7 @@ async def update_series_subs(
                 selectinload(Role.fixes),
                 selectinload(Role.records),
             )
+            .execution_options(populate_existing=True)
         )
     ).all()
 
@@ -930,7 +938,9 @@ async def set_role_actor(
     if data.actor_id is None:
         db_role.user_id = null()
         await db.commit()
-        return RoleActorResponse(user_id=None, nickname=None, avatar_url=None, is_active=None)
+        return RoleActorResponse(
+            user_id=None, nickname=None, avatar_url=None, is_active=None
+        )
 
     actor = await db.get(UserModel, data.actor_id)
     if actor is None:
@@ -1064,7 +1074,9 @@ async def update_role_subtitle(
         state=new_state.value,
         checked=db_role.checked,
         fixes=[
-            RoleSubtitleFixResponse(id=f.id, phrase=f.phrase, note=f.note, ready=f.ready)
+            RoleSubtitleFixResponse(
+                id=f.id, phrase=f.phrase, note=f.note, ready=f.ready
+            )
             for f in role_full.fixes
         ],
     )
