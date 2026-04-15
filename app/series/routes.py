@@ -289,7 +289,7 @@ async def get_series_by_id(
             selectinload(Series.project),
             selectinload(Series.materials),
             selectinload(Series.links),
-            selectinload(Series.roles).selectinload(Role.user),
+            selectinload(Series.roles).selectinload(Role.user).selectinload(UserModel.contacts),
             selectinload(Series.roles).selectinload(Role.fixes),
             selectinload(Series.roles).selectinload(Role.records),
         )
@@ -309,7 +309,9 @@ async def get_series_by_id(
     staff_map = {}
     if valid_staff_ids:
         staff_users = await db.execute(
-            select(UserModel).where(UserModel.user_id.in_(valid_staff_ids))
+            select(UserModel)
+            .where(UserModel.user_id.in_(valid_staff_ids))
+            .options(selectinload(UserModel.contacts))
         )
         staff_map = {u.user_id: u for u in staff_users.scalars().all()}
 
@@ -324,6 +326,9 @@ async def get_series_by_id(
             "nickname": u.nickname,
             "avatar_url": u.avatar_url,
             "is_active": u.is_active,
+            "contacts": [
+                {"title": c.title, "link": c.link} for c in u.contacts
+            ],
         }
 
     def format_date(d: date):
@@ -350,6 +355,7 @@ async def get_series_by_id(
             "project_title": s.project.title,
             "project_curator_id": getattr(s.project, "curator_id", None),
             "project_image_url": getattr(s.project, "image_url", None),
+            "type": getattr(s.project, "type", None),
         },
         "seria_title": s.title,
         "start_date": format_date(s.start_date),
@@ -388,6 +394,9 @@ async def get_series_by_id(
                     "nickname": r.user.nickname if r.user else "Не назначен",
                     "avatar_url": r.user.avatar_url if r.user else None,
                     "is_active": r.user.is_active if r.user else False,
+                    "contacts": [
+                        {"title": c.title, "link": c.link} for c in r.user.contacts
+                    ] if r.user else [],
                 },
                 "fixes": [
                     {
