@@ -12,6 +12,7 @@ from .schemas import (
     UserUpdate,
     RestCreate,
     RestResponse,
+    UpdateUserPassword,
 )
 from .models import User as UserModel, Contacts as ContactModel
 from .utils import (
@@ -598,3 +599,27 @@ async def delete_role(
     await db.commit()
 
     return "Роль была удалена."
+
+
+@router.patch("/{user_id}/password")
+async def change_user_password(
+    user_id: int,
+    new_password: UpdateUserPassword,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 4:
+        raise HTTPException(status_code=403)
+
+    db_user = await db.scalar(select(UserModel).where(UserModel.user_id == user_id))
+    if not db_user:
+        raise HTTPException(status_code=404)
+    if await get_max_lvl(db, db_user) >= 4:
+        raise HTTPException(status_code=403)
+
+    db_user.hashed_password = hash_password(new_password.new_password)
+    await db.commit()
+
+    await db.refresh(db_user)
+
+    return "Пароль успешно изменен."

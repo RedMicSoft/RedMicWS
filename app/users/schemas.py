@@ -106,3 +106,7 @@ class RestResponse(BaseModel):
     rest_reason: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UpdateUserPassword(BaseModel):
+    new_password: str
