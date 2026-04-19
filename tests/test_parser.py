@@ -173,7 +173,7 @@ def test_by_name_with_beginning_no_duplicate(role: str) -> None:
         )
     )
 
-    assert content.count("Начало") == 1
+    assert content.count("*Начало*") == 1
     assert content == expected
 
 
