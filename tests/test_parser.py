@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from app.series.parser import ASSParser
+from app.series.parser import BEGINNING_TEXT, ASSParser
 
 
 def _load_desc(data_dir: str) -> tuple[str, str]:
@@ -173,7 +173,7 @@ def test_by_name_with_beginning_no_duplicate(role: str) -> None:
         )
     )
 
-    assert content.count("*Начало*") == 1
+    assert content.count(BEGINNING_TEXT) == 1
     assert content == expected
 
 
@@ -214,7 +214,7 @@ def test_by_style_with_beginning_no_duplicate(role: str) -> None:
         )
     )
 
-    assert content.count("*Начало*") == 1
+    assert content.count(BEGINNING_TEXT) == 1
     assert content == expected
 
 

@@ -5,6 +5,7 @@ from typing import Literal
 import pysubs2
 
 BEGINNING_DURATION_MS = 100  # 0.1 секунды
+BEGINNING_TEXT = "*Начало*"
 TECH_MARKER = "!t"
 TECH_INFO_PREFIX = "!ТЕХ ИНФ"
 
@@ -88,7 +89,7 @@ class ASSParser:
         beginning_record = pysubs2.SSAEvent(
             start=0,
             end=BEGINNING_DURATION_MS,
-            text="*Начало*",
+            text=BEGINNING_TEXT,
         )
         output.append(beginning_record)
 
@@ -98,7 +99,7 @@ class ASSParser:
 
             # Пропускаем исходную запись «Начало», если она уже есть в файле,
             # чтобы не создавать дубль с той, что вставили выше.
-            if event.start == 0 and event.text.strip() == "*Начало*":
+            if event.start == 0 and event.text.strip() == BEGINNING_TEXT:
                 continue
 
             if event.text.strip() == TECH_MARKER:
