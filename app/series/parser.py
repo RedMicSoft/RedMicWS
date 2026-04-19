@@ -88,7 +88,7 @@ class ASSParser:
         beginning_record = pysubs2.SSAEvent(
             start=0,
             end=BEGINNING_DURATION_MS,
-            text="Начало",
+            text="*Начало*",
         )
         output.append(beginning_record)
 
@@ -98,7 +98,7 @@ class ASSParser:
 
             # Пропускаем исходную запись «Начало», если она уже есть в файле,
             # чтобы не создавать дубль с той, что вставили выше.
-            if event.start == 0 and event.text.strip() == "Начало":
+            if event.start == 0 and event.text.strip() == "*Начало*":
                 continue
 
             if event.text.strip() == TECH_MARKER:
