@@ -334,20 +334,6 @@ async def get_series_by_id(
     def format_date(d: date):
         return d.strftime("%d.%m.%y") if d else None
 
-    def get_role_state(role):
-        # Используем безопасный доступ к атрибутам, так как они могут быть не в модели
-        records = getattr(role, "records", [])
-        fixes = getattr(role, "fixes", [])
-        if not records:
-            return "не загружена"
-        if not getattr(role, "timed", True):
-            return "не затаймлена"
-        if not getattr(role, "checked", True):
-            return "не проверена"
-        if fixes and any(not getattr(f, "ready", False) for f in fixes):
-            return "требуются фиксы"
-        return "готова к сведению"
-
     return {
         "id": s.id,
         "project": {
@@ -415,7 +401,7 @@ async def get_series_by_id(
                 "note": getattr(r, "note", ""),
                 "checked": getattr(r, "checked", False),
                 "timed": getattr(r, "timed", False),
-                "state": get_role_state(r),
+                "state": compute_role_state(r).value,
                 "subtitle": getattr(r, "srt_url", None),
                 "records": [
                     {

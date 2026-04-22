@@ -657,10 +657,10 @@ class SeriesRoleRecordDeleteAccessChecker:
 def compute_role_state(role: Role) -> RoleState:
     if not role.records:
         return RoleState.NOT_LOADED
+    if any(not f.ready for f in role.fixes):
+        return RoleState.FIXES_NEED
     if not role.timed:
         return RoleState.NOT_TIMED
     if not role.checked:
         return RoleState.NOT_CHECKED
-    if role.fixes:
-        return RoleState.FIXES_NEED
     return RoleState.MIXING_READY

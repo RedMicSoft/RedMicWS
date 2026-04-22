@@ -2179,6 +2179,22 @@ async def test_create_role_fix_mixing_ready_becomes_fixes_need(
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_create_role_fix_priority_over_not_timed_and_not_checked(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """FIXES_NEED приоритетнее NOT_TIMED и NOT_CHECKED: запись есть, timed=False, checked=False, фикс активен → требуются фиксы."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, user_id=None, request=request, timed=False, checked=False)
+    await create_record(role.role_id, request)
+
+    response = await post_role_fix(client, role.role_id, 5, "фикс при не затаймленной роли", auth_headers, request)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["state"] == "требуются фиксы"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
 async def test_create_role_fix_not_loaded_state_unchanged(
     auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
 ):
