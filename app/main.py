@@ -84,16 +84,16 @@ app.include_router(files_router)
 app.include_router(links_router)
 
 
-origins = [
-    "https://redmic-team.com",
-    "https://redmic-workspace-test.ru",
-    "http://localhost:35565"
-]
+#origins = [
+#    "https://redmic-team.com",
+#    "https://redmic-workspace-test.ru",
+#    "http://localhost:35565"
+#]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,  # Or replace "*" with your frontend's origin if known
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=origins,  # Or replace "*" with your frontend's origin if known
+#    allow_credentials=True,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
