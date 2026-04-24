@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi import Request, Response
 
 from app.files.utils import (
     CustomStaticFiles,
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 
 @app.options("/{rest_of_path:path}")
-async def preflight_handler(request: Request, rest_of_path: path):
+async def preflight_handler(request: Request, rest_of_path: str):
     return Response(
         status_code=204,
         headers={
