@@ -55,6 +55,44 @@ async def test_work_existing_series_endpoint(auth_headers: dict, client: AsyncCl
 
 
 # ---------------------------------------------------------------------------
+# GET /series/
+# ---------------------------------------------------------------------------
+
+
+async def test_get_series_list_unauthorized(client: AsyncClient):
+    response = await client.get("/series/")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_get_series_list_data(
+    auth_headers: dict,
+    client: AsyncClient,
+    request: pytest.FixtureRequest,
+):
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    response = await client.get(
+        "/series/", params={"project_id": project.project_id}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+
+    assert item["id"] == series.id
+    assert item["project_id"] == project.project_id
+    assert item["project_title"] == project.title
+    assert item["title"] == series.title
+    assert item["state"] == series.state.value
+    assert item["dub_progress"] == "no_roles"
+    assert item["participants"] == []
+
+
+# ---------------------------------------------------------------------------
 # GET /series/user/{user_id}/work
 # ---------------------------------------------------------------------------
 
