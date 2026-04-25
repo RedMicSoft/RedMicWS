@@ -289,6 +289,7 @@ async def get_series_by_id(
             selectinload(Series.project),
             selectinload(Series.materials),
             selectinload(Series.links),
+            selectinload(Series.ass_fixes),
             selectinload(Series.roles)
             .selectinload(Role.user)
             .selectinload(UserModel.contacts),
@@ -360,8 +361,10 @@ async def get_series_by_id(
         ],
         "ass_file": {
             "ass_file_url": s.ass_url,
-            "ass_fixes": [],
-        },  # Можно добавить логику загрузки AssFile если нужно
+            "ass_fixes": [
+                {"fix_id": af.fix_id, "fix_note": af.fix_note} for af in s.ass_fixes
+            ],
+        },
         "links": [
             {"id": l.id, "link_title": l.link_title, "link_url": l.link_url}
             for l in s.links

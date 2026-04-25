@@ -1,5 +1,7 @@
 import asyncio
+from datetime import date
 from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
 from httpx import AsyncClient
@@ -16,9 +18,9 @@ from tests.helpers.series import (
     create_series_link,
     STAFF_WORK_TYPES,
 )
-from tests.helpers.roles import create_role
+from tests.helpers.roles import create_role, create_fix, create_record
 from app.roles.models import RoleState
-from app.series.models import Material
+from app.series.models import AssFile, Material
 from app.series.models import SeriesState
 from app.users.utils import MEMBER_LEVEL, CURATOR_LEVEL
 
@@ -1374,3 +1376,220 @@ async def test_delete_series_link_ok_project_curator(
     response = await client.delete(f"/series/links/{link.id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "Ссылка успешно удалена"
+
+
+# ---------------------------------------------------------------------------
+# GET /series/{series_id}
+# ---------------------------------------------------------------------------
+
+_SERIES_TOP_KEYS = {
+    "id",
+    "project",
+    "seria_title",
+    "start_date",
+    "first_stage_date",
+    "second_stage_date",
+    "publication_date",
+    "note",
+    "state",
+    "materials",
+    "ass_file",
+    "links",
+    "no_actors",
+    "roles",
+}
+_PROJECT_KEYS = {
+    "project_id",
+    "project_title",
+    "project_curator_id",
+    "project_image_url",
+    "type",
+}
+_NO_ACTORS_KEYS = {
+    "curator",
+    "sound_engineer",
+    "raw_sound_engineer",
+    "director",
+    "timer",
+    "subtitler",
+}
+_STAFF_USER_KEYS = {"user_id", "nickname", "avatar_url", "is_active", "contacts"}
+
+
+async def test_get_series_by_id_no_auth(client: AsyncClient):
+    response = await client.get("/series/999999")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_get_series_by_id_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.get("/series/999999", headers=auth_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_get_series_by_id_valid_data(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Проверяет все аспекты валидного ответа GET /series/{id} в одном запросе."""
+    fixed_date = date(2025, 3, 7)
+
+    curator_user = await create_user(request)
+    sound_engineer_user = await create_user(request)
+    raw_sound_engineer_user = await create_user(request)
+    timer_user = await create_user(request)
+    translator_user = await create_user(request)
+    director_user = await create_user(request)
+    actor_user = await create_user(request)
+
+    project = await create_project(curator_id=curator_user.user_id, request=request)
+    series = await create_series(
+        project.project_id,
+        request,
+        state=SeriesState.MIXING,
+        note="примечание к серии",
+        ass_url="/media/subs/test.ass",
+        start_date=fixed_date,
+        first_deadline=fixed_date,
+        second_deadline=fixed_date,
+        exp_publish_date=fixed_date,
+        curator=curator_user.user_id,
+        sound_engineer=sound_engineer_user.user_id,
+        raw_sound_engineer=raw_sound_engineer_user.user_id,
+        timer=timer_user.user_id,
+        translator=translator_user.user_id,
+        director=director_user.user_id,
+    )
+
+    material = await create_material(series.id, request, title="Исходник")
+    link = await create_series_link(
+        series.id, request, link_url="https://example.com/test", link_title="Тест"
+    )
+
+    async with TestSession() as s:
+        ass_fix = AssFile(series_id=series.id, fix_note="Исправить")
+        s.add(ass_fix)
+        await s.commit()
+        await s.refresh(ass_fix)
+        fix_id = ass_fix.fix_id
+
+    async def _cleanup_ass_fix():
+        async with TestSession() as s:
+            obj = await s.get(AssFile, fix_id)
+            if obj:
+                await s.delete(obj)
+                await s.commit()
+
+    request.addfinalizer(lambda: asyncio.run(_cleanup_ass_fix()))
+
+    # role1: без актёра, с фиксом
+    role1 = await create_role(series.id, user_id=None, request=request)
+    fix = await create_fix(role1.role_id, phrase=5, note="поправить", request=request)
+
+    # role2: с актёром, timed+checked+запись → MIXING_READY
+    role2 = await create_role(
+        series.id, user_id=actor_user.user_id, request=request, timed=True, checked=True
+    )
+    record = await create_record(role2.role_id, request=request)
+
+    response = await client.get(f"/series/{series.id}", headers=auth_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = dict(response.json())
+
+    # верхнеуровневая структура и базовые поля
+    assert set(data.keys()) == _SERIES_TOP_KEYS
+    assert data["id"] == series.id
+    assert data["seria_title"] == series.title
+    assert data["state"] == SeriesState.MIXING.value
+    assert data["note"] == "примечание к серии"
+
+    # формат дат ДД.ММ.ГГ
+    assert data["start_date"] == "07.03.25"
+    assert data["first_stage_date"] == "07.03.25"
+    assert data["second_stage_date"] == "07.03.25"
+    assert data["publication_date"] == "07.03.25"
+
+    # проект
+    project_data = data["project"]
+    assert set(project_data.keys()) == _PROJECT_KEYS
+    assert project_data["project_id"] == project.project_id
+    assert project_data["project_title"] == project.title
+
+    # материалы
+    materials = list(data["materials"])
+    assert len(materials) == 1
+    assert materials[0]["id"] == material.id
+    assert materials[0]["material_title"] == "Исходник"
+    assert set(dict(materials[0]).keys()) == {"id", "material_title", "material_link"}
+
+    # ссылки
+    links = list(data["links"])
+    assert len(links) == 1
+    assert links[0]["id"] == link.id
+    assert links[0]["link_title"] == "Тест"
+    assert links[0]["link_url"] == "https://example.com/test"
+    assert set(dict(links[0]).keys()) == {"id", "link_title", "link_url"}
+
+    # ass_file
+    ass = data["ass_file"]
+    assert ass["ass_file_url"] == "/media/subs/test.ass"
+    ass_fixes = ass["ass_fixes"]
+    assert len(ass_fixes) == 1
+    assert ass_fixes[0]["fix_id"] == fix_id
+    assert ass_fixes[0]["fix_note"] == "Исправить"
+
+    # no_actors: структура и все 6 должностей (включая маппинг translator → subtitler)
+    no_actors = dict(data["no_actors"])
+    assert set(no_actors.keys()) == _NO_ACTORS_KEYS
+    assert no_actors["curator"] is not None
+    assert set(no_actors["curator"].keys()) == _STAFF_USER_KEYS
+    assert no_actors["curator"]["user_id"] == curator_user.user_id
+    assert no_actors["curator"]["nickname"] == curator_user.nickname
+    assert no_actors["sound_engineer"]["user_id"] == sound_engineer_user.user_id
+    assert no_actors["raw_sound_engineer"]["user_id"] == raw_sound_engineer_user.user_id
+    assert no_actors["timer"]["user_id"] == timer_user.user_id
+    assert no_actors["subtitler"]["user_id"] == translator_user.user_id
+    assert no_actors["director"]["user_id"] == director_user.user_id
+
+    # роли
+    roles = data["roles"]
+    assert len(roles) == 2
+    assert {r["id"] for r in roles} == {role1.role_id, role2.role_id}
+
+    role1_data = next(r for r in roles if r["id"] == role1.role_id)
+    assert set(role1_data.keys()) == {
+        "id",
+        "role_name",
+        "actor",
+        "fixes",
+        "note",
+        "checked",
+        "timed",
+        "state",
+        "subtitle",
+        "records",
+    }
+    actor1 = role1_data["actor"]
+    assert actor1["user_id"] is None
+    assert actor1["nickname"] == "Не назначен"
+    assert actor1["is_active"] is False
+    assert actor1["contacts"] == []
+    assert isinstance(role1_data["state"], str)
+    assert role1_data["state"] in {s.value for s in RoleState}
+    fixes = role1_data["fixes"]
+    assert len(fixes) == 1
+    assert fixes[0]["id"] == fix.id
+    assert fixes[0]["phrase"] == 5
+    assert fixes[0]["note"] == "поправить"
+    assert fixes[0]["ready"] is False
+
+    role2_data = next(r for r in roles if r["id"] == role2.role_id)
+    actor2 = role2_data["actor"]
+    assert actor2["user_id"] == actor_user.user_id
+    assert actor2["nickname"] == actor_user.nickname
+    assert role2_data["state"] == RoleState.MIXING_READY.value
+    records = role2_data["records"]
+    assert len(records) == 1
+    assert records[0]["id"] == record.id
+    assert set(records[0].keys()) == {"id", "record_title", "record_note", "record_url"}
