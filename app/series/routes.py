@@ -204,6 +204,7 @@ async def get_series(
         db_series = db_series.where(Series.project_id == project_id)
 
     db_series = db_series.options(
+        selectinload(Series.project),
         selectinload(Series.roles).selectinload(Role.user),
         selectinload(Series.roles).selectinload(Role.fixes),
         selectinload(Series.roles).selectinload(Role.records),
@@ -215,6 +216,7 @@ async def get_series(
         {
             "id": s.id,
             "project_id": s.project_id,
+            "project_title": s.project.title,
             "title": s.title,
             "state": s.state,
             "dub_progress": compute_dub_progress(s.roles),

@@ -28,6 +28,7 @@ class ProjectSeriesResponse(BaseModel):
 class SeriesListResponse(BaseModel):
     id: int
     project_id: int
+    project_title: str
     title: str
     state: str
     dub_progress: str
