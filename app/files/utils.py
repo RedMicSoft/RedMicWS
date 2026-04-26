@@ -14,6 +14,7 @@ from urllib.parse import quote
 from app.files.models import FileModel
 from app.roles.models import Record
 from app.database import async_session_maker
+from app.series.models import Material
 
 FILES_DIR = Path(__file__).resolve().parent.parent.parent / "team_files"
 FILES_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,7 +67,18 @@ class TeamStaticFiles(CustomStaticFiles):
             file = await db.scalar(
                 select(FileModel).where(FileModel.file_url == full_db_path)
             )
-        return file.prev_filename if file and file.prev_filename else Path(path).name
+            material = await db.scalar(
+                select(Material).where(Material.material_link == full_db_path)
+            )
+        return (
+            file.prev_filename
+            if file and file.prev_filename
+            else (
+                material.material_prev_title
+                if material and material.material_prev_title
+                else Path(path).name
+            )
+        )
 
 
 class SubsStaticFiles(StaticFiles):
