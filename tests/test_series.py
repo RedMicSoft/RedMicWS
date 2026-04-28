@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -90,6 +90,10 @@ async def test_get_series_list_data(
     assert item["state"] == series.state.value
     assert item["dub_progress"] == "no_roles"
     assert item["participants"] == []
+    assert item["start_date"] == date.today().isoformat()
+    assert item["first_deadline"] == date.today().isoformat()
+    assert item["second_deadline"] == date.today().isoformat()
+    assert item["publication_date"] == date.today().isoformat()
 
 
 # ---------------------------------------------------------------------------

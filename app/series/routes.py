@@ -221,6 +221,10 @@ async def get_series(
             "state": s.state,
             "dub_progress": compute_dub_progress(s.roles),
             "participants": await get_series_participants(s, db),
+            "start_date": s.start_date,
+            "publication_date": s.exp_publish_date,
+            "first_deadline": s.first_deadline,
+            "second_deadline": s.second_deadline,
         }
         for s in db_series
     ]

@@ -33,6 +33,10 @@ class SeriesListResponse(BaseModel):
     state: str
     dub_progress: str
     participants: list[SeriesParticipant]
+    start_date: date
+    publication_date: date
+    first_deadline: date
+    second_deadline: date
 
     model_config = ConfigDict(from_attributes=True)
 
