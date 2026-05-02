@@ -733,7 +733,7 @@ async def update_series_subs(
             select(Role)
             .where(Role.series_id == seria_id)
             .options(
-                selectinload(Role.user),
+                selectinload(Role.user).selectinload(UserModel.contacts),
                 selectinload(Role.fixes),
                 selectinload(Role.records),
             )
@@ -754,6 +754,7 @@ async def update_series_subs(
                     user_id=role.user.user_id,
                     nickname=role.user.nickname,
                     avatar_url=role.user.avatar_url,
+                    contacts=role.user.contacts,
                     is_active=role.user.is_active,
                 )
                 if role.user is not None and role.user.user_id != -1
