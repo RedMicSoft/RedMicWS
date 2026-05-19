@@ -106,3 +106,14 @@ class ProjectRoleHistory(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="project_roles")
+
+
+class ProjectPlan(Base):
+    __tablename__ = "project_plans"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column()
+    publication_date: Mapped[date] = mapped_column()
+    way: Mapped[str] = mapped_column()
+    link: Mapped[str] = mapped_column()
+    note: Mapped[str] = mapped_column()
