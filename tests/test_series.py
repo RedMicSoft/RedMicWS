@@ -86,6 +86,7 @@ async def test_get_series_list_data(
     assert item["id"] == series.id
     assert item["project_id"] == project.project_id
     assert item["project_title"] == project.title
+    assert item["project_status"] == project.status
     assert item["title"] == series.title
     assert item["state"] == series.state.value
     assert item["dub_progress"] == "no_roles"
@@ -136,6 +137,7 @@ async def test_work_all_positions_and_roles(
         assert item["seria"]["seria_id"] == series.id
         assert item["seria"]["seria_title"] == series.title
         assert item["project"]["project_id"] == project.project_id
+        assert item["project"]["project_status"] == project.status
         if item["work_type"] == "актёр":
             assert item["role"] is not None
             assert "role_name" in item["role"]
@@ -169,12 +171,17 @@ async def test_work_across_two_projects(
     project_ids = {item["project"]["project_id"] for item in data}
     assert project_ids == {project1.project_id, project2.project_id}
 
+    for item in data:
+        assert item["project"]["project_status"] in {project1.status, project2.status}
+
     actor_item = next(i for i in data if i["work_type"] == "актёр")
     assert actor_item["project"]["project_id"] == project1.project_id
+    assert actor_item["project"]["project_status"] == project1.status
     assert actor_item["role"] is not None
 
     staff_item = next(i for i in data if i["work_type"] == "куратор")
     assert staff_item["project"]["project_id"] == project2.project_id
+    assert staff_item["project"]["project_status"] == project2.status
     assert staff_item["role"] is None
 
 

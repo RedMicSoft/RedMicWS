@@ -29,6 +29,7 @@ class SeriesListResponse(BaseModel):
     id: int
     project_id: int
     project_title: str
+    project_status: str
     title: str
     state: str
     dub_progress: str
@@ -82,6 +83,7 @@ class UserWorkSeriaInfo(BaseModel):
 class UserWorkProjectInfo(BaseModel):
     project_id: int
     project_title: str
+    project_status: str
 
 
 class UserWorkRoleInfo(BaseModel):
