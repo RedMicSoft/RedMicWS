@@ -150,9 +150,37 @@ class ProjectParticipantCreate(BaseModel):
 class ProjectDescriptionUpdate(BaseModel):
     description: str
 
+
 class ProjectWayUpdate(BaseModel):
     way: str
 
 
 class ProjectTypeUpdate(BaseModel):
     type: voice_types
+
+
+class ProjectPlanResponse(BaseModel):
+    id: int
+    title: str
+    publication_date: date
+    way: str
+    link: str
+    note: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectPlanCreate(BaseModel):
+    title: str
+    publication_date: date
+    way: str
+    link: str
+    note: str
+
+
+class ProjectPlanUpdate(BaseModel):
+    title: str | None = None
+    publication_date: date | None = None
+    way: str | None = None
+    link: str | None = None
+    note: str | None = None

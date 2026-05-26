@@ -70,6 +70,7 @@ class UsersResponse(BaseModel):
     team_roles: list[LevelResponse] = []
     is_active: bool
     public_contact: str | None
+    rest_start: date | None = Field(exclude=True)
 
     @computed_field
     @property
@@ -77,6 +78,11 @@ class UsersResponse(BaseModel):
         if not self.birth_date:
             return None
         return relativedelta(date.today(), self.birth_date).years
+
+    @computed_field
+    @property
+    def rest_existance(self) -> bool:
+        return self.rest_start is not None
 
     model_config = ConfigDict(from_attributes=True)
 

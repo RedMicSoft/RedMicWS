@@ -28,6 +28,7 @@ from .models import (
     ProjectUser,
     Project,
     ProjectRoleHistory,
+    ProjectPlan,
 )
 from app.users.models import User as UserModel
 from .schemas import (
@@ -46,6 +47,9 @@ from .schemas import (
     ProjectParticipantsResponse,
     voice_types,
     ProjectTypeUpdate,
+    ProjectPlanResponse,
+    ProjectPlanCreate,
+    ProjectPlanUpdate,
 )
 from app.users.utils import (
     get_max_lvl,
@@ -55,6 +59,17 @@ from app.users.utils import (
 from app.users.schemas import UsersResponse
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+@router.get("/plans")
+async def get_project_plans(
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    db_query = await db.scalars(select(ProjectPlan))
+    db_query = db_query.all()
+
+    return db_query
 
 
 @router.get("/", response_model=list[ProjectsResponse])
@@ -470,3 +485,64 @@ async def update_type(
     upd_project = await get_db_project(project_id, db)
 
     return upd_project
+
+
+@router.post("/plans", response_model=ProjectPlanResponse)
+async def create_plan(
+    new_plan: ProjectPlanCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(status_code=403)
+    new_db_plan = ProjectPlan(**new_plan.model_dump())
+
+    db.add(new_db_plan)
+    await db.commit()
+    await db.refresh(new_db_plan)
+
+    return new_db_plan
+
+
+@router.patch("/plans/{plan_id}", response_model=ProjectPlanResponse)
+async def update_plan(
+    plan_id: int,
+    updated_plan: ProjectPlanUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(status_code=403)
+
+    db_plan = await db.scalar(select(ProjectPlan).where(ProjectPlan.id == plan_id))
+    if not db_plan:
+        raise HTTPException(status_code=404)
+
+    update_data = updated_plan.model_dump(exclude_unset=True)
+
+    for k, v in update_data.items():
+        setattr(db_plan, k, v)
+
+    await db.commit()
+    await db.refresh(db_plan)
+
+    return db_plan
+
+
+@router.delete("/plans/{plan_id}")
+async def delete_plan(
+    plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if await get_max_lvl(db, user) < 2:
+        raise HTTPException(status_code=403)
+
+    plan_query = await db.scalar(select(ProjectPlan).where(ProjectPlan.id == plan_id))
+    if not plan_query:
+        raise HTTPException(status_code=404)
+
+    await db.delete(plan_query)
+    await db.commit()
+
+    return "Успешно удалено."

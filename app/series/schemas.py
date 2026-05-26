@@ -16,6 +16,13 @@ class SeriesParticipant(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ContactResponse(BaseModel):
+    title: str
+    link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProjectSeriesResponse(BaseModel):
     id: int
     project_id: int
@@ -197,6 +204,7 @@ class SeriesResponse(BaseModel):
 
 # --- Schemas for PUT /{seria_id}/subs ---
 
+
 class AssFixItemResponse(BaseModel):
     fix_id: int
     fix_note: str
@@ -213,6 +221,7 @@ class ActorSubsResponse(BaseModel):
     user_id: int
     nickname: str
     avatar_url: str | None
+    contacts: list[ContactResponse]
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
