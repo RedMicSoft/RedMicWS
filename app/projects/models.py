@@ -77,10 +77,7 @@ class ProjectUser(Base):
     __tablename__ = "projects_users"
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="SET DEFAULT"),
-        primary_key=True,
-        default=DELETED_USER_ID,
-        server_default=str(DELETED_USER_ID),
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
     )
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.project_id", ondelete="CASCADE"), primary_key=True
