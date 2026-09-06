@@ -29,14 +29,6 @@ def generate_srt_filename(project_title: str, seria_title: str, role_name: str) 
     return sanitize_filename(f"{project_title}_{seria_title}_{role_name}") + ".srt"
 
 
-async def save_srt(srt: UploadFile) -> str:
-    if srt.filename is None or not srt.filename.lower().endswith(".srt"):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Файл должен быть .srt")
-
-    content = await srt.read()
-    return save_srt_content(content, srt.filename)
-
-
 def save_srt_content(content: bytes, filename: str) -> str:
     if not filename.lower().endswith(".srt"):
         raise ValueError("Файл должен быть .srt")

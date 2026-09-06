@@ -255,6 +255,7 @@ class RoleSubsResponse(BaseModel):
     timed: bool
     state: str
     subtitle: str
+    phrases_count: int
     records: list[RecordSubsResponse]
 
 
@@ -294,6 +295,7 @@ class RoleCreateResponse(BaseModel):
     timed: bool
     state: str
     subtitle: str | None
+    phrases_count: int
     records: None = None
 
 
@@ -332,6 +334,7 @@ class RoleSubtitleResponse(BaseModel):
     subtitle: str
     state: str
     checked: bool
+    phrases_count: int
     fixes: list[RoleSubtitleFixResponse]
 
 

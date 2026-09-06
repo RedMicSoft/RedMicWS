@@ -14,6 +14,29 @@ TECH_INFO_PREFIX = "!ТЕХ ИНФ"
 _SRT_CLEANUP_RE = re.compile(r"</?(?:i|b|u|s)>|\{[^}]*\}", re.IGNORECASE)
 
 
+def _count_dialogue_phrases(subs: "pysubs2.SSAFile") -> int:
+    count = 0
+    for event in subs:
+        if event.type != "Dialogue":
+            continue
+        text = event.plaintext.strip()
+        if text == BEGINNING_TEXT:
+            continue
+        if text.startswith(TECH_INFO_PREFIX):
+            continue
+        count += 1
+    return count
+
+
+def count_phrases(content: str, format_: Literal["ass", "srt"] = "srt") -> int:
+    """
+    Считает количество реплик в содержимом субтитров (ass или srt),
+    не считая служебную запись «Начало» и техническую пометку «!ТЕХ ИНФ».
+    """
+    subs = pysubs2.SSAFile.from_string(content, format_=format_)
+    return _count_dialogue_phrases(subs)
+
+
 class ASSParser:
     """
     Парсер субтитров в формате ASS.

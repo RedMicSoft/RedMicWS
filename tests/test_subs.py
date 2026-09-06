@@ -123,6 +123,19 @@ async def test_subs_create_new_roles_by_name(
     for role in data["roles"]:
         assert str(role["subtitle"]).startswith("/subs/srt/")
 
+    # phrases_count вычисляется из содержимого srt для каждой роли
+    # (не считая служебные записи «Начало» и «!ТЕХ ИНФ»)
+    expected_phrases_count = {
+        "Ales": 3,
+        "Fiery": 4,
+        "Rian": 1,
+        "Sebner_TV": 4,
+        "l_Luna": 2,
+    }
+    roles_by_name = {r["role_name"]: r for r in data["roles"]}
+    for role_name, expected_count in expected_phrases_count.items():
+        assert roles_by_name[role_name]["phrases_count"] == expected_count, role_name
+
     # При первой загрузке субтитров заметки «Добавлена роль:» не создаются
     fix_notes = [str(af["fix_note"]) for af in data["ass_file"]["ass_fixes"]]
     assert not any(note.startswith("Добавлена роль:") for note in fix_notes)
@@ -271,6 +284,10 @@ async def test_subs_update_changed_role_creates_fix(
     # checked сброшен в ответе
     fiery_resp = next(r for r in r2.json()["roles"] if r["role_name"] == "Fiery")
     assert fiery_resp["checked"] is False
+
+    # phrases_count пересчитан из нового содержимого (4 реплики в исходном ASS),
+    # а не унаследован от временного sentinel-контента (1 реплика)
+    assert fiery_resp["phrases_count"] == 4
 
 
 @pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)

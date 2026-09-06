@@ -37,6 +37,7 @@ class Role(Base):
         default=RoleState.NOT_LOADED,
     )
     srt_url: Mapped[str] = mapped_column()
+    phrases_count: Mapped[int] = mapped_column(default=0, server_default="0")
 
     user: Mapped["app.users.models.User"] = relationship(
         "app.users.models.User", back_populates="roles"

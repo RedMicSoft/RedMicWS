@@ -104,6 +104,7 @@ async def test_create_role_success_by_curator_level(
     assert body["timed"] is False
     assert body["state"] == "не загружена"
     assert body["subtitle"] is None
+    assert body["phrases_count"] == 0
     assert body["records"] is None
 
     async with TestSession() as s:
@@ -1084,6 +1085,7 @@ async def test_update_subtitle_success_by_curator_level(
     assert "был обновлён srt файл" in fix["note"]
     assert fix["ready"] is False
     assert "state" in body
+    assert body["phrases_count"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1221,6 +1223,77 @@ async def test_update_subtitle_returns_full_fix_list(
     phrases = {f["phrase"] for f in body["fixes"]}
     assert 0 in phrases
     assert 5 in phrases
+
+
+# ---------------------------------------------------------------------------
+# phrases_count — количество реплик, вычисляемое из содержимого srt
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_role_phrases_count_defaults_to_zero(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """У новой роли без субтитров phrases_count == 0."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    assert role.phrases_count == 0
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_computes_phrases_count(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """phrases_count вычисляется из количества реплик в загруженном srt-файле."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    srt_content = (
+        "1\n00:00:01,000 --> 00:00:02,000\nПервая реплика\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nВторая реплика\n\n"
+        "3\n00:00:05,000 --> 00:00:06,000\nТретья реплика\n\n"
+    ).encode("utf-8")
+
+    response = await put_role_subtitle(
+        client, role.role_id, auth_headers, content=srt_content, request=request
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["phrases_count"] == 3
+
+    async with TestSession() as s:
+        db_role = await s.get(Role, role.role_id)
+        assert db_role is not None
+        assert db_role.phrases_count == 3
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_subtitle_recomputes_phrases_count(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """При повторной загрузке srt с другим числом реплик значение пересчитывается."""
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    role = await create_role(series.id, None, request)
+
+    r1 = await put_role_subtitle(client, role.role_id, auth_headers, request=request)
+    assert r1.status_code == status.HTTP_200_OK
+    assert r1.json()["phrases_count"] == 1
+
+    srt_content = (
+        "1\n00:00:01,000 --> 00:00:02,000\nОдна\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nДве\n\n"
+    ).encode("utf-8")
+    r2 = await put_role_subtitle(
+        client, role.role_id, auth_headers, content=srt_content, request=request
+    )
+    assert r2.status_code == status.HTTP_200_OK
+    assert r2.json()["phrases_count"] == 2
 
 
 # ===========================================================================

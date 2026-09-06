@@ -74,7 +74,6 @@ from .utils import (
     delete_series_subs,
     generate_record_title_filename,
     generate_srt_filename,
-    save_srt,
     save_ass,
     compute_dub_progress,
     compute_role_state,
@@ -104,7 +103,7 @@ from .models import Series, Material, SeriesLink, AssFile
 from app.projects.models import Project as ProjectModel, ProjectRoleHistory
 from app.roles.models import Role, RoleState, Fix, Record
 from app.files.utils import save_file
-from .parser import ASSParser
+from .parser import ASSParser, count_phrases
 
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -416,6 +415,7 @@ async def get_series_by_id(
                 "timed": getattr(r, "timed", False),
                 "state": compute_role_state(r).value,
                 "subtitle": getattr(r, "srt_url", None),
+                "phrases_count": getattr(r, "phrases_count", 0),
                 "records": [
                     {
                         "id": rec.id,
@@ -680,11 +680,13 @@ async def update_series_subs(
             series_description=series_title,
             output_format="srt",
         )
+        phrases_count = count_phrases(new_srt_content, "srt")
 
         role_lower = role_name.lower()
 
         if role_lower in existing_roles:
             existing_role = existing_roles[role_lower]
+            existing_role.phrases_count = phrases_count
 
             old_full_path = BASE_DIR / existing_role.srt_url.lstrip("/")
             old_content = (
@@ -722,6 +724,7 @@ async def update_series_subs(
                     checked=False,
                     timed=False,
                     state=RoleState.NOT_LOADED,
+                    phrases_count=phrases_count,
                 )
             )
             if had_subs:
@@ -773,6 +776,7 @@ async def update_series_subs(
             timed=role.timed,
             state=compute_role_state(role).value,
             subtitle=role.srt_url,
+            phrases_count=role.phrases_count,
             records=[
                 RecordSubsResponse(
                     id=rec.id,
@@ -913,6 +917,7 @@ async def create_series_role(
         timed=new_role.timed,
         state=new_role.state.value,
         subtitle=None,
+        phrases_count=new_role.phrases_count,
         records=None,
     )
 
@@ -1040,9 +1045,13 @@ async def update_role_subtitle(
         seria_title=role_with_series_and_project.series.title,
         role_name=role_with_series_and_project.role_name,
     )
-    srt_url = await save_srt(srt_file)
+    content = await srt_file.read()
+    srt_url = save_srt_content(content, srt_file.filename)
     db_role.srt_url = srt_url
     db_role.checked = False
+    db_role.phrases_count = count_phrases(
+        content.decode("utf-8", errors="replace"), "srt"
+    )
 
     now = datetime.now()
     db.add(
@@ -1073,6 +1082,7 @@ async def update_role_subtitle(
         subtitle=db_role.srt_url,
         state=new_state.value,
         checked=db_role.checked,
+        phrases_count=db_role.phrases_count,
         fixes=[
             RoleSubtitleFixResponse(
                 id=f.id, phrase=f.phrase, note=f.note, ready=f.ready

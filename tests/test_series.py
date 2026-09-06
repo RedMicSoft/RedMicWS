@@ -1617,6 +1617,7 @@ async def test_get_series_by_id_valid_data(
         "timed",
         "state",
         "subtitle",
+        "phrases_count",
         "records",
     }
     actor1 = role1_data["actor"]

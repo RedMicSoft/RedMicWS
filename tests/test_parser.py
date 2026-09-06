@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from app.series.parser import BEGINNING_TEXT, ASSParser
+from app.series.parser import BEGINNING_TEXT, ASSParser, count_phrases
 
 
 def _load_desc(data_dir: str) -> tuple[str, str]:
@@ -258,6 +258,54 @@ def test_by_name_beginning_in_middle(role: str) -> None:
     )
 
     assert content == expected
+
+
+# ---------------------------------------------------------------------------
+# count_phrases — подсчёт количества реплик в субтитрах (ass/srt)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "role,expected_count",
+    [
+        ("Ales", 3),
+        ("Fiery", 4),
+        ("Rian", 1),
+        ("Sebner_TV", 4),
+        ("l_Luna", 2),
+    ],
+)
+def test_count_phrases_from_srt_excludes_service_lines(
+    role: str, expected_count: int
+) -> None:
+    """
+    Реплики «Начало» и «!ТЕХ ИНФ» не учитываются при подсчёте количества
+    реплик роли, полученной из SRT-контента (сконвертированного из ASS).
+    """
+    parser = ASSParser(os.path.join(_NAME_DIR, "input", "test.ass"))
+    parser.load()
+    content = parser.get_role_content(
+        role,
+        project_description=_NAME_PROJECT,
+        series_description=_NAME_SERIES,
+        output_format="srt",
+    )
+
+    assert count_phrases(content, "srt") == expected_count
+
+
+def test_count_phrases_plain_srt_without_markers() -> None:
+    """Для обычного srt без служебных меток считаются все реплики."""
+    content = (
+        "1\n00:00:01,000 --> 00:00:02,000\nПервая\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nВторая\n\n"
+    )
+    assert count_phrases(content, "srt") == 2
+
+
+def test_count_phrases_empty_content() -> None:
+    """Пустое содержимое субтитров даёт ноль реплик."""
+    assert count_phrases("", "srt") == 0
 
 
 # ---------------------------------------------------------------------------
