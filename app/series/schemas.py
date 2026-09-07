@@ -176,6 +176,10 @@ class MaterialCreateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MaterialUpdate(BaseModel):
+    material_title: str
+
+
 class SeriesLinkCreate(BaseModel):
     link_url: str
     link_title: str

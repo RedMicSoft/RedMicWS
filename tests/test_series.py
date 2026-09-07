@@ -1102,6 +1102,168 @@ async def test_create_material_title_matches_param(
 
 
 # ---------------------------------------------------------------------------
+# PATCH /series/materials/{material_id}
+# ---------------------------------------------------------------------------
+
+
+async def test_update_material_no_auth(client: AsyncClient):
+    response = await client.patch(
+        "/series/materials/999999", json={"material_title": "Новое имя"}
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_material_not_found(auth_headers: dict, client: AsyncClient):
+    response = await client.patch(
+        "/series/materials/999999",
+        json={"material_title": "Новое имя"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": MEMBER_LEVEL}], indirect=True)
+async def test_update_material_forbidden_plain_member(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, не входящий в состав серии, получает 403."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": "Новое имя"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_material_ok_curator_level(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор (уровень 2) успешно переименовывает материал."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request, title="Старое имя")
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": "Новое имя"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["id"] == material.id
+    assert data["material_title"] == "Новое имя"
+    assert data["material_link"] == material.material_link
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_material_response_shape(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Ответ содержит ровно поля id, material_title, material_link."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": "Форма ответа"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert set(response.json().keys()) == {"id", "material_title", "material_link"}
+
+
+@pytest.mark.parametrize(
+    "staff_field",
+    ["curator", "sound_engineer", "raw_sound_engineer", "timer", "translator", "director"],
+)
+async def test_update_material_ok_as_staff_member(
+    staff_field: str, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Участник уровня 1, назначенный на должность серии, может переименовать материал."""
+    staff_user, _ = await create_user_with_level(access_level=MEMBER_LEVEL, request=request)
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request, **{staff_field: staff_user.user_id})
+    material = await create_material(series.id, request)
+    headers = await login_user(client, staff_user.nickname)
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": f"Переименовано через {staff_field}"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["material_title"] == f"Переименовано через {staff_field}"
+
+
+async def test_update_material_ok_project_curator(
+    client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Куратор проекта (уровень 1) может переименовать материал серии."""
+    project_curator, _ = await create_user_with_level(
+        access_level=MEMBER_LEVEL, request=request
+    )
+    project = await create_project(curator_id=project_curator.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+    headers = await login_user(client, project_curator.nickname)
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": "Переименовано куратором проекта"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["material_title"] == "Переименовано куратором проекта"
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_material_missing_title_invalid(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Отсутствие обязательного поля material_title возвращает 422."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+
+    response = await client.patch(
+        f"/series/materials/{material.id}", json={}, headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_update_material_does_not_change_link(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """Переименование не затрагивает ссылку на файл материала."""
+    other = await create_user(request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+    material = await create_material(series.id, request)
+    original_link = material.material_link
+
+    response = await client.patch(
+        f"/series/materials/{material.id}",
+        json={"material_title": "Другое имя"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["material_link"] == original_link
+
+
+# ---------------------------------------------------------------------------
 # DELETE /series/materials/{material_id}
 # ---------------------------------------------------------------------------
 

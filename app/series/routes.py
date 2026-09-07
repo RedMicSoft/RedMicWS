@@ -31,6 +31,7 @@ from app.series.schemas import (
     SeriesNoActorsUpdate,
     SeriesNoActorsResponse,
     MaterialCreateResponse,
+    MaterialUpdate,
     SeriesLinkCreate,
     SeriesLinkResponse,
     SubsUpdateResponse,
@@ -606,6 +607,22 @@ async def delete_series_link(
     await db.commit()
 
     return "Ссылка успешно удалена"
+
+
+@router.patch(
+    "/materials/{material_id}",
+    response_model=MaterialCreateResponse,
+)
+async def update_material(
+    data: MaterialUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    db_material: Annotated[Material, Depends(MaterialAccessChecker())],
+) -> Material:
+    db_material.material_title = data.material_title
+    await db.commit()
+    await db.refresh(db_material)
+
+    return db_material
 
 
 @router.delete(
