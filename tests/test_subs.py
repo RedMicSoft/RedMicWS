@@ -110,7 +110,9 @@ async def test_subs_create_new_roles_by_name(
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(project.project_id, request)
 
-    response = await subs_put(client, series.id, _BY_NAME, "name", auth_headers, request)
+    response = await subs_put(
+        client, series.id, _BY_NAME, "name", auth_headers, request
+    )
 
     assert response.status_code == status.HTTP_200_OK, response.text
     data = response.json()
@@ -153,7 +155,9 @@ async def test_subs_create_new_roles_by_style(
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(project.project_id, request)
 
-    response = await subs_put(client, series.id, _BY_NAME, "style", auth_headers, request)
+    response = await subs_put(
+        client, series.id, _BY_NAME, "style", auth_headers, request
+    )
 
     assert response.status_code == status.HTTP_200_OK, response.text
     data = response.json()
@@ -175,7 +179,9 @@ async def test_subs_create_roles_by_style_ass_file(
     project = await create_project(curator_id=other.user_id, request=request)
     series = await create_series(project.project_id, request)
 
-    response = await subs_put(client, series.id, _BY_STYLE, "style", auth_headers, request)
+    response = await subs_put(
+        client, series.id, _BY_STYLE, "style", auth_headers, request
+    )
 
     assert response.status_code == status.HTTP_200_OK, response.text
     data = response.json()
@@ -256,7 +262,9 @@ async def test_subs_update_changed_role_creates_fix(
 
     # Подменяем SRT Fiery на диске — гарантируем отличие при следующей загрузке
     srt_path = BASE_DIR / fiery_srt_url.lstrip("/")
-    srt_path.write_text("1\n00:00:01,000 --> 00:00:02,000\nMODIFIED SENTINEL\n\n", "utf-8")
+    srt_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nMODIFIED SENTINEL\n\n", "utf-8"
+    )
 
     # Выставляем checked=True, чтобы убедиться, что он сбросится
     async with TestSession() as s:
@@ -287,6 +295,61 @@ async def test_subs_update_changed_role_creates_fix(
 
     # phrases_count пересчитан из нового содержимого (4 реплики в исходном ASS),
     # а не унаследован от временного sentinel-контента (1 реплика)
+    assert fiery_resp["phrases_count"] == 4
+
+
+@pytest.mark.parametrize("auth_headers", [{"level": CURATOR_LEVEL}], indirect=True)
+async def test_subs_update_changed_role_no_fix_when_disabled(
+    auth_headers: dict, client: AsyncClient, request: pytest.FixtureRequest
+):
+    """
+    Если SRT-содержимое роли изменилось, но create_fix=False:
+    - Fix с пометкой «обновлён srt файл» не создаётся
+    - srt_url обновляется как обычно, но checked не сбрасывается
+    """
+    other, _ = await create_user_with_level(CURATOR_LEVEL, request)
+    project = await create_project(curator_id=other.user_id, request=request)
+    series = await create_series(project.project_id, request)
+
+    r1 = await subs_put(client, series.id, _BY_NAME, "name", auth_headers, request)
+    assert r1.status_code == status.HTTP_200_OK, r1.text
+
+    async with TestSession() as s:
+        db_fiery = await s.scalar(
+            select(Role).where(Role.series_id == series.id, Role.role_name == "Fiery")
+        )
+        assert db_fiery is not None
+        fiery_role_id = db_fiery.role_id
+        fiery_srt_url = db_fiery.srt_url
+
+    srt_path = BASE_DIR / fiery_srt_url.lstrip("/")
+    srt_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nMODIFIED SENTINEL\n\n", "utf-8"
+    )
+
+    async with TestSession() as s:
+        db_fiery = await s.get(Role, fiery_role_id)
+        assert db_fiery is not None
+        db_fiery.checked = True
+        await s.commit()
+
+    r2 = await subs_put(
+        client, series.id, _BY_NAME, "name", auth_headers, request, create_fix=False
+    )
+    assert r2.status_code == status.HTTP_200_OK, r2.text
+
+    async with TestSession() as s:
+        fiery_fixes = (
+            await s.scalars(select(Fix).where(Fix.role_id == fiery_role_id))
+        ).all()
+    assert fiery_fixes == [], "Fix не должен создаваться при create_fix=False"
+
+    fiery_resp = next(r for r in r2.json()["roles"] if r["role_name"] == "Fiery")
+    assert (
+        fiery_resp["checked"] is True
+    ), "checked не должен сбрасываться при create_fix=False"
+    # phrases_count пересчитан из нового содержимого (4 реплики в исходном ASS),
+    # значит srt-файл на диске был реально пересинхронизирован, а не остался sentinel-ем
     assert fiery_resp["phrases_count"] == 4
 
 
@@ -360,7 +423,9 @@ async def test_subs_actor_assigned_from_project_role(
 
     request.addfinalizer(lambda: asyncio.run(_delete_proj_role()))
 
-    response = await subs_put(client, series.id, _BY_NAME, "name", auth_headers, request)
+    response = await subs_put(
+        client, series.id, _BY_NAME, "name", auth_headers, request
+    )
     assert response.status_code == status.HTTP_200_OK, response.text
 
     ales_role = next(r for r in response.json()["roles"] if r["role_name"] == "Ales")
@@ -380,7 +445,9 @@ async def test_subs_no_project_role_actor_is_none(
     project = await create_project(curator_id=curator.user_id, request=request)
     series = await create_series(project.project_id, request)
 
-    response = await subs_put(client, series.id, _BY_NAME, "name", auth_headers, request)
+    response = await subs_put(
+        client, series.id, _BY_NAME, "name", auth_headers, request
+    )
     assert response.status_code == status.HTTP_200_OK, response.text
 
     for role in response.json()["roles"]:
@@ -391,9 +458,9 @@ async def test_subs_no_project_role_actor_is_none(
             await s.scalars(select(Role).where(Role.series_id == series.id))
         ).all()
     for db_role in db_roles:
-        assert db_role.user_id is None, (
-            f"user_id роли '{db_role.role_name}' должен быть NULL, получено {db_role.user_id}"
-        )
+        assert (
+            db_role.user_id is None
+        ), f"user_id роли '{db_role.role_name}' должен быть NULL, получено {db_role.user_id}"
 
 
 # ---------------------------------------------------------------------------
@@ -821,7 +888,9 @@ async def test_subs_fix_patch_forbidden_for_non_member(
     series = await create_series(project.project_id, request)
 
     other_headers = await login_user(client, other.nickname)
-    fix_resp = await subs_fix_post(client, series.id, "оригинал", other_headers, request)
+    fix_resp = await subs_fix_post(
+        client, series.id, "оригинал", other_headers, request
+    )
     assert fix_resp.status_code == status.HTTP_201_CREATED
     fix_id = fix_resp.json()["fix_id"]
 

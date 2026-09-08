@@ -647,10 +647,13 @@ async def update_series_subs(
     ass_file: UploadFile,
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[Series, Depends(SubsAccessChecker())],
+    create_fix: Annotated[bool, Form()] = True,
 ) -> SubsUpdateResponse:
     """
     Загружает/обновляет ASS-файл серии, парсит роли и создаёт/обновляет их.
     parse_type: "name" — роли из поля Name, "style" — из поля Style.
+    create_fix: если False, при изменении SRT-содержимого роли не создаётся
+    нулевой Fix с пометкой об обновлении srt файла, а флаг checked роли не сбрасывается.
     """
     db_seria = await db.scalar(
         select(Series)
@@ -715,16 +718,17 @@ async def update_series_subs(
                     new_srt_content.encode("utf-8"), srt_filename
                 )
                 existing_role.srt_url = srt_url
-                existing_role.checked = False
 
-                db.add(
-                    Fix(
-                        role_id=existing_role.role_id,
-                        phrase=0,
-                        note=f"был обновлён srt файл {now.strftime('%d.%m.%Y %H:%M')}",
-                        ready=False,
+                if create_fix:
+                    existing_role.checked = False
+                    db.add(
+                        Fix(
+                            role_id=existing_role.role_id,
+                            phrase=0,
+                            note=f"был обновлён srt файл {now.strftime('%d.%m.%Y %H:%M')}",
+                            ready=False,
+                        )
                     )
-                )
                 db.add(
                     AssFile(series_id=seria_id, fix_note=f"Обновлена роль: {role_name}")
                 )

@@ -90,21 +90,26 @@ async def subs_put(
     parse_type: str,
     headers: dict,
     request: pytest.FixtureRequest | None = None,
+    create_fix: bool | None = None,
 ) -> httpx.Response:
     """
     Отправляет PUT /series/{seria_id}/subs с указанным ASS-файлом.
 
     Если передан request и ответ успешный (2xx), автоматически регистрирует
     через addfinalizer удаление ASS/SRT файлов, созданных эндпоинтом.
+    create_fix: если передан, отправляется как поле формы create_fix.
     """
+    form_data = {"parse_type": parse_type}
+    if create_fix is not None:
+        form_data["create_fix"] = str(create_fix)
     with ass_path.open("rb") as f:
         response = await client.put(
             f"/series/{seria_id}/subs",
-            data={"parse_type": parse_type},
+            data=form_data,
             files={"ass_file": (ass_path.name, f, "text/plain")},
             headers=headers,
         )
     if request is not None and response.is_success:
-        data = response.json()
-        request.addfinalizer(lambda: cleanup_response_files(data))
+        response_data = response.json()
+        request.addfinalizer(lambda: cleanup_response_files(response_data))
     return response
